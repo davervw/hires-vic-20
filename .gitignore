@@ -1,0 +1,10 @@
+.DS_Store
+build/labels
+build/size.dat
+bin/win/*.exe
+!bin/win/prgsize.exe
+hires20.prg
+loadhires20.prg
+prgsize_src/.vs
+prgsize_src/obj
+prgsize_src/bin
