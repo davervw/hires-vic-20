@@ -8,13 +8,14 @@
 ; 0000-03FF Low RAM (1K)
 ; 0400-0FFF RAM Expansion (3K)
 ; 1000-1FFF Standard RAM (4K)
-;  1000-10EF Video Memory 8x16 characters 0F-FE
-;  10F0-1FEF Video RAM Bitmap (of characters 0F-FE)
-;  1FF0-1FFF Video RAM Bitmap of character FF (extra 8x16 cell)
-; 2000-7FFF Expansion RAM (24K)
+;  1000-11E1 TEXT Video Memory 8x8 characters 00-FF, 22*23=482
+;  11E2-1FFF Available RAM when in TEXT mode
+;  1000-10EF HIRES Video Memory 8x16 characters 10-FF
+;  10F0-1FFF HIRES Video RAM Bitmap (of characters 0F-FF)
+; 2000-7FFF Expansion RAM (24K) - recommend relocation of start of BASIC
 ; 8000-8FFF Character ROM (4K)
 ; 9000-9FFF I/O space
-; A000-BFFF Cartridge ROM and/or RAM (8K)
+; A000-BFFF Cartridge ROM and/or RAM (8K) - HIRES20.ML loaded A000-????
 ; C000-DFFF BASIC ROM
 ; E000-FFFF KERNAL ROM
 
