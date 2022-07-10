@@ -566,7 +566,6 @@ two_params_bytes
     jsr getbytc
     bne ++
     stx param2
-    bne ++ ; not end of statement
     rts
 ++  jmp syntax_error
 
@@ -606,8 +605,8 @@ three_params_bytes
     bne ++
     stx param2
     jsr getbytc
-    stx param3
     bne ++ ; not end of statement
+    stx param3
     rts
 ++  jmp syntax_error
 
