@@ -63,7 +63,7 @@ start
     jmp hires_unplot ; remove point from screen
     jmp get_resolution ; retrieve resolution
     jmp draw_text ; text at location
-    ;jmp color ; set foreground, background, border, auxilary, inverse
+    jmp color ; set foreground, background, border, auxilary, inverse
     brk
 
 hires_init
@@ -413,6 +413,50 @@ clear_graphics
     bne -
     rts
 
+color
+    jsr five_params_bytes
+    lda param1
+    and #$F0
+    bne ++
+    lda param2
+    and #$F0
+    bne ++
+    lda param3
+    and #$f8
+    bne ++
+    lda param4
+    and #$f0
+    bne ++
+    lda param5
+    and #$fe
+    bne ++
+    lda param1
+    sta 646
+    lda param2
+    asl
+    asl
+    asl
+    asl
+    ora param3
+    ldx param5
+    bne +
+    ora #$08
++   sta $900F
+    lda $900E
+    asl
+    asl
+    asl
+    asl
+    ora param4
+    asl
+    rol
+    rol
+    rol
+    adc #0
+    sta $900E
+    rts
+++  jmp illegal_quantity
+
 ;multiply by shift/add
 ;input: a and x
 ;output: a (low), x (high), y (preserved)
@@ -610,6 +654,33 @@ three_params_bytes
     rts
 ++  jmp syntax_error
 
+five_params_bytes
+    ldy #0
+    lda ($7a),y
+    cmp #$2C
+    bne ++
+    jsr getbytc
+    cmp #$2C
+    bne ++
+    stx param1
+    jsr getbytc
+    cmp #$2C
+    bne ++
+    stx param2
+    jsr getbytc
+    cmp #$2C
+    bne ++
+    stx param3
+    jsr getbytc
+    cmp #$2C
+    bne ++
+    stx param4
+    jsr getbytc
+    bne ++ ; not end of statement
+    stx param5
+    rts
+++  jmp syntax_error
+
 petscii_to_screencode 
         cmp #$20
         bcs +++
@@ -705,6 +776,8 @@ remainh !byte 0
 param1 !byte 0
 param2 !byte 0
 param3 !byte 0
+param4 !byte 0
+param5 !byte 0
 
 resx !byte 0
 resy !byte 0
