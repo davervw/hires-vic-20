@@ -21,12 +21,12 @@
 
 ; PROPOSED COMMANDS
 ; HIRES 1,[XR],[YR]
-; PLOT 0|1,X,Y
+; PLOT 0|1|2|3,X,Y
 ; PLOT 0|1,"ABC",X,Y
-; PLOT 0|1 [@ X1, Y1][TO X2, Y2][...]
-; RECT 0|1 @ X1, Y1 TO X2, Y2
+; PLOT 0|1|2|3 [@ X1, Y1][TO X2, Y2][...]
+; RECT 0|1|2|3 @ X1, Y1 TO X2, Y2
 ; PLOT COLOR [FG]
-; COLOR [1,[FG][,[BG][,[BD][,AUX]]]][INVERSE]
+; COLOR [1,[FG][,[BG][,[BD][,AUX]]]]|[INVERSE]
 ; COLOR 0|1[,FG] @ X1, Y1 [TO x2, Y2]
 ; DELAY {JIFFIES}
 ;
@@ -69,6 +69,7 @@ start
     jmp get_resolution ; retrieve resolution
     jmp draw_text ; text at location
     jmp color ; set foreground, background, border, auxilary, inverse
+    jmp hires_mplot ; plot multi-color point on screen
     brk
 
 hires_init
@@ -149,9 +150,60 @@ hires_unplot
     sta ($fb),y
     rts
 
+hires_mplot
+    jsr three_params_bytes
+    jsr mplot_prep
+    and ($fb),y
+    sta $57
+    txa
+    ora $57
+    sta ($fb),y
+    rts
+
 ; addr = $1100 + vr*(x >> 3) + y
+; bit = 2^(7-(x and 7))
 
 plot_prep
+; input param1 = x coord
+; input param2 = y coord
+; output address in $fb/$fc accounting only for x coord
+; output .a=bit mask shifted
+; output .y=y coord to be used as offset, e.g. ($fb),y
+    jsr plot_addr
+    lda param1
+    and #$07
+    tax
+    lda pow7_x,x
+    rts
+
+mplot_prep
+; input param1 = x coord
+; input param2 = y coord
+; input param3 = color bit 0,1,2,3 (00, 01, 10, 11)
+; output address in $fb/$fc acconting only for x coord
+; output .a=inverse bits mask, .x=bits color shifted
+; output .y=y coord to be used as offset, e.g. ($fb),y
+    jsr plot_addr
+    lda param1
+    and #$07
+    lsr
+    sta $57
+    tax
+    lda mbit_x+12, x ; bits mask
+    eor #$ff
+    pha
+    lda param3
+    and #$03
+    asl
+    asl
+    adc $57
+    tax
+    lda mbit_x, x
+    tax ; bits selection in X
+    pla ; bits mask in A
+    rts
+
+plot_addr
     lda param1
     cmp resx
     beq +
@@ -173,10 +225,6 @@ plot_prep
     adc #$11
     sta $fc
     ldy param2
-    lda param1
-    and #$07
-    tax
-    lda pow7_x,x
     rts
     
 ; addr = $1100 + 16*int(x/8)+16*hr/8*int(y/16)+(y and 15)
@@ -794,3 +842,9 @@ strlen !byte 0
 charrvs !byte 0
 
 pow7_x !byte 128, 64, 32, 16, 8, 4, 2, 1
+
+mbit_x 
+!byte 0, 0, 0, 0 ; bits 00
+!byte 64, 16, 4, 1 ; bits 01
+!byte 128, 32, 8, 2 ; bits 10
+!byte 192, 48, 12, 3 ; bits 11
