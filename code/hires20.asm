@@ -70,6 +70,7 @@ start
     jmp draw_text ; text at location
     jmp color ; set foreground, background, border, auxilary, inverse
     jmp hires_mplot ; plot multi-color point on screen
+    jmp hires_fill ; fill graphics with a bit pattern
     brk
 
 hires_init
@@ -159,6 +160,11 @@ hires_mplot
     ora $57
     sta ($fb),y
     rts
+
+hires_fill
+    jsr one_param_byte
+    lda param1
+    jmp fill_graphics
 
 ; addr = $1100 + vr*(x >> 3) + y
 ; bit = 2^(7-(x and 7))
@@ -446,7 +452,10 @@ verifyres
 
 clear_graphics
     lda #0
-    tay
+    jmp fill_graphics
+
+fill_graphics
+    ldy #0
 -   sta $1100, y
     sta $1200, y
     sta $1300, y
@@ -650,6 +659,17 @@ get_resolution
     ldx resx
     ldy resy
     rts
+
+one_param_byte
+    ldy #0
+    lda ($7a),y
+    cmp #$2C
+    bne ++
+    jsr getbytc
+    bne ++
+    stx param1
+    rts
+++  jmp syntax_error
 
 two_params_bytes
     ldy #0
