@@ -254,7 +254,7 @@ mplot_prep
 
 ; hires_addr = $1100 + vr*(x >> 3) + y
 ; bit = 2^(7-(x and 7))
-; color_addr = $9400 + (vr >> 4)*(x >> 3) + (y >> 4) ; offset to $9400 returned in .x
+; color_addr = $9400 + (y >> 4) * (xr >> 3) + (x >> 3)  ; offset to $9400 returned in .x
 plot_addr
     lda param1
     cmp resx
@@ -283,16 +283,14 @@ plot_addr
     lsr
     lsr
     lsr
-    sta $58
-    lda resy
+    tax
+    lda resx
     lsr
     lsr
     lsr
-    lsr
-    ldx $57
     jsr multax    
     clc
-    adc $58
+    adc $57
     tax
 
     ldy param2
