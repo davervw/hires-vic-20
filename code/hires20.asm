@@ -161,7 +161,8 @@ hires_plot
     sta ($fb),y
     lda plot_color
     bmi +
-    ldx plot_color_offset 
+    ldx plot_color_offset
+    and #7 
     sta $9400,x
 +   rts
 
@@ -173,7 +174,8 @@ hires_unplot
     sta ($fb),y
     lda plot_color
     bmi +
-    ldx plot_color_offset 
+    ldx plot_color_offset
+    and #7 
     sta $9400,x
 +   rts
 
@@ -187,7 +189,8 @@ hires_mplot
     sta ($fb),y
     lda plot_color
     bmi +
-    ldx plot_color_offset 
+    ldx plot_color_offset
+    ora #8 
     sta $9400,x
 +   rts
 
