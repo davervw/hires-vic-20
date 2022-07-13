@@ -71,7 +71,25 @@ start
     jmp color ; set foreground, background, border, auxilary, inverse
     jmp hires_mplot ; plot multi-color point on screen
     jmp hires_fill ; fill graphics with a bit pattern
-    brk
+    jmp set_plot_color ; set color selectively applied to color cells for graphics, or 255 to use existing color cells
+
+    ; BRK statements filler for yet to be implemented entry points (256 bytes)
+    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
 hires_init
     jsr two_params_bytes
@@ -141,7 +159,11 @@ hires_plot
     jsr plot_prep
     ora ($fb),y
     sta ($fb),y
-    rts
+    lda plot_color
+    bmi +
+    ldx plot_color_offset 
+    sta $9400,x
++   rts
 
 hires_unplot
     jsr two_params_bytes
@@ -149,7 +171,11 @@ hires_unplot
     eor #$ff
     and ($fb),y
     sta ($fb),y
-    rts
+    lda plot_color
+    bmi +
+    ldx plot_color_offset 
+    sta $9400,x
++   rts
 
 hires_mplot
     jsr three_params_bytes
@@ -159,15 +185,27 @@ hires_mplot
     txa
     ora $57
     sta ($fb),y
-    rts
+    lda plot_color
+    bmi +
+    ldx plot_color_offset 
+    sta $9400,x
++   rts
 
 hires_fill
     jsr one_param_byte
     lda param1
     jmp fill_graphics
 
-; addr = $1100 + vr*(x >> 3) + y
-; bit = 2^(7-(x and 7))
+set_plot_color
+    jsr one_param_byte
+    lda param1
+    cmp #$10
+    bcc +
+    cmp #$FF
+    beq +
+    jmp illegal_quantity
++   sta plot_color
+    rts
 
 plot_prep
 ; input param1 = x coord
@@ -175,7 +213,9 @@ plot_prep
 ; output address in $fb/$fc accounting only for x coord
 ; output .a=bit mask shifted
 ; output .y=y coord to be used as offset, e.g. ($fb),y
+; output plot_color_offset=offset to color memory, e.g. $9400,x
     jsr plot_addr
+    stx plot_color_offset
     lda param1
     and #$07
     tax
@@ -189,7 +229,10 @@ mplot_prep
 ; output address in $fb/$fc acconting only for x coord
 ; output .a=inverse bits mask, .x=bits color shifted
 ; output .y=y coord to be used as offset, e.g. ($fb),y
+; output .x=bit position
+; output plot_color_offset contains offset to color memory, e.g. $9400,x
     jsr plot_addr
+    stx plot_color_offset
     lda param1
     and #$07
     lsr
@@ -209,6 +252,9 @@ mplot_prep
     pla ; bits mask in A
     rts
 
+; hires_addr = $1100 + vr*(x >> 3) + y
+; bit = 2^(7-(x and 7))
+; color_addr = $9400 + (vr >> 4)*(x >> 3) + (y >> 4) ; offset to $9400 returned in .x
 plot_addr
     lda param1
     cmp resx
@@ -223,6 +269,7 @@ plot_addr
     lsr
     lsr
     lsr
+    sta $57
     ldx resy
     jsr multax
     sta $fb
@@ -230,6 +277,24 @@ plot_addr
     clc
     adc #$11
     sta $fc
+
+    lda param2
+    lsr
+    lsr
+    lsr
+    lsr
+    sta $58
+    lda resy
+    lsr
+    lsr
+    lsr
+    lsr
+    ldx $57
+    jsr multax    
+    clc
+    adc $58
+    tax
+
     ldy param2
     rts
     
@@ -857,6 +922,8 @@ resy !byte 0
 bitmap_chars !byte 0
 cols !byte 0
 rows !byte 0
+plot_color !byte 255
+plot_color_offset !byte 0
 
 strlen !byte 0
 charrvs !byte 0
