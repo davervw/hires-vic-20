@@ -72,6 +72,8 @@ start
     jmp hires_mplot ; plot multi-color point on screen
     jmp hires_fill ; fill graphics with a bit pattern
     jmp set_plot_color ; set color selectively applied to color cells for graphics, or 255 to use existing color cells
+    jmp hires_draw ; draw line on screen
+    ;jmp hires_mdraw ; draw multicolor line on screen
 
     ; BRK statements filler for yet to be implemented entry points (256 bytes)
     !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
@@ -156,6 +158,7 @@ draw_text
 
 hires_plot
     jsr two_params_bytes
+hires_plot_point
     jsr plot_prep
     ora ($fb),y
     sta ($fb),y
@@ -209,6 +212,116 @@ set_plot_color
     jmp illegal_quantity
 +   sta plot_color
     rts
+
+hires_draw
+    jsr two_params_bytes
+ 
+    ; check if out of range
+    lda param1
+    cmp resx
+    bcc +
+-   jmp illegal_quantity
++   lda param2
+    cmp resy
+    bcs -
+
+    lda #1
+    sta incx
+    sta incy
+
+    ; get absolute diffx, diffy
+    lda param1
+    sec
+    sbc oldx
+    bcs +
+    ldx #$ff
+    stx incx
+    eor #$ff
+    adc #1
++   sta diffx
+    lda param2
+    sec
+    sbc oldy
+    bcs +
+    ldy #$ff
+    sty incy
+    eor #$ff
+    adc #1
++   sta diffy
+
+    ; test for point only
+    lda diffx
+    ora diffy
+    bne +
+    jmp hires_plot_point
+
+    ; swap old/new
++   ldx param1
+    ldy param2
+    lda oldx
+    sta param1
+    lda oldy
+    sta param2
+    stx param3
+    sty param4
+
+    lda diffx
+    cmp diffy
+    bcs +++
+
+    ; diffx is less than diffy, so draw each y
+    lda #0
+    sta $59
+-   jsr hires_plot_point
+    clc
+    lda param2
+    adc incy
+    sta param2
+    clc
+    lda $59
+    adc diffx
+    sta $59
+    bcs +
+    cmp diffy
+    bcc ++
++   sbc diffy
+    sta $59
+    clc
+    lda param1
+    adc incx
+    sta param1
+
+++  lda param2
+    cmp param4
+    bne -
+    jmp hires_plot_point ; one last time
+
++++ ; diffx is greater than or equal to diffy, so draw each x 
+    lda #0
+    sta $59
+-   jsr hires_plot_point
+    clc
+    lda param1
+    adc incx
+    sta param1
+    clc
+    lda $59
+    adc diffy
+    sta $59
+    bcs + ; if 8-bit overflow, then definitely bigger than diffx
+    cmp diffx
+    bcc ++
++   sbc diffx ; reset remainder
+    sta $59
+    clc
+    lda param2
+    adc incy
+    sta param2
+
+++  lda param1
+    cmp param3
+    bne -
+    jmp hires_plot_point ; one last time
 
 plot_prep
 ; input param1 = x coord
@@ -267,6 +380,7 @@ plot_addr
     bcc +
 ++  jmp illegal_quantity
 +   lda param1
+    sta oldx
     lsr
     lsr
     lsr
@@ -292,6 +406,7 @@ plot_addr
     tax
 
     ldy param2
+    sty oldy
     rts
     
 ; addr = $1100 + 16*int(x/8)+16*hr/8*int(y/16)+(y and 15)
@@ -901,6 +1016,15 @@ param2 !byte 0
 param3 !byte 0
 param4 !byte 0
 param5 !byte 0
+
+oldx !byte 0
+oldy !byte 0
+
+diffx !byte 0
+diffy !byte 0
+incx !byte 0
+incy !byte 0
+supress_error !byte 0
 
 resx !byte 0
 resy !byte 0
