@@ -282,10 +282,7 @@ plot_addr
     lsr
     lsr
     tax
-    lda resx
-    lsr
-    lsr
-    lsr
+    lda cols
     jsr multax    
     clc
     adc $57
@@ -339,16 +336,11 @@ plot_addr
 ;     rts
 
 switch_graphics
-    lda resx
-    lsr
-    lsr
-    lsr
+    lda cols
     sta 36866
-    lda resy
-    lsr
-    lsr
-    lsr
-    ora #1
+    lda rows
+    sec
+    rol
     sta 36867
     lda #$CC
     sta 36869
@@ -357,12 +349,9 @@ switch_graphics
     bcs +++
 
 ; adjust ntsc margins of screen based on resolutions
-    lda resx
-    cmp #200
-    bcs + ; special case for 200 or above
-    lsr
-    lsr
-    lsr
+    lda cols
+    cmp #25
+    bcs + ; special case for 200 resx or above
     eor #$ff ; invert bits to make negative, off by one
     adc #28 ; add one more to compensate for ones complement
     bpl ++ ; make sure positive (will probably never be negative due to earlier 200 check)
@@ -377,10 +366,7 @@ switch_graphics
     rts
 
 ; adjust pal margins of screen based on resolutions
-+++ lda resx
-    lsr
-    lsr
-    lsr
++++ lda cols
     eor #$ff ; invert bits to make negative, off by one
     adc #35 ; add one more to compensate for ones complement
     sta 36864
