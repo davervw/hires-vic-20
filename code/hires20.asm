@@ -258,11 +258,9 @@ mplot_prep
 plot_addr
     lda param1
     cmp resx
-    beq +
     bcs ++
-+   lda param2
+    lda param2
     cmp resy
-    beq +
     bcc +
 ++  jmp illegal_quantity
 +   lda param1
