@@ -171,6 +171,7 @@ hires_plot_point
 
 hires_unplot
     jsr two_params_bytes
+hires_unplot_point
     jsr plot_prep
     eor #$ff
     and ($fb),y
@@ -184,6 +185,7 @@ hires_unplot
 
 hires_mplot
     jsr three_params_bytes
+hires_mplot_point
     jsr mplot_prep
     and ($fb),y
     sta $57
@@ -214,8 +216,12 @@ set_plot_color
     rts
 
 hires_draw
-    jsr two_params_bytes
- 
+    jsr two_or_three_params_bytes
+    ; param1 = x coordinate
+    ; param2 = y coordinate
+    ; param3 (optional) = multicolor 0,1,2,3 choice, or 255 (unplot hires)
+    ; param4 = number of parameters
+
     ; check if out of range
     lda param1
     cmp resx
@@ -224,6 +230,24 @@ hires_draw
 +   lda param2
     cmp resy
     bcs -
+    lda param4
+    cmp #4
+    bcs -
+    cmp #2
+    bcc -
+    bne +
+    ldx #<hires_plot_point
+    ldy #>hires_plot_point
+    bne +++
++   lda param3
+    bmi ++
+    ldx #<hires_mplot_point
+    ldy #>hires_mplot_point
+    bne +++
+++  ldx #<hires_unplot_point
+    ldy #>hires_unplot_point
++++ stx plot_point_vector
+    sty plot_point_vector+1
 
     lda #1
     sta incx
@@ -253,7 +277,7 @@ hires_draw
     lda diffx
     ora diffy
     bne +
-    jmp hires_plot_point
+    jmp call_plot_point_indirect
 
     ; swap old/new
 +   ldx param1
@@ -262,8 +286,8 @@ hires_draw
     sta param1
     lda oldy
     sta param2
-    stx param3
-    sty param4
+    stx param4
+    sty param5
 
     lda diffx
     cmp diffy
@@ -272,7 +296,7 @@ hires_draw
     ; diffx is less than diffy, so draw each y
     lda #0
     sta $59
--   jsr hires_plot_point
+-   jsr call_plot_point_indirect
     clc
     lda param2
     adc incy
@@ -292,14 +316,14 @@ hires_draw
     sta param1
 
 ++  lda param2
-    cmp param4
+    cmp param5
     bne -
-    jmp hires_plot_point ; one last time
+    jmp call_plot_point_indirect ; one last time
 
 +++ ; diffx is greater than or equal to diffy, so draw each x 
     lda #0
     sta $59
--   jsr hires_plot_point
+-   jsr call_plot_point_indirect
     clc
     lda param1
     adc incx
@@ -319,9 +343,12 @@ hires_draw
     sta param2
 
 ++  lda param1
-    cmp param3
+    cmp param4
     bne -
-    jmp hires_plot_point ; one last time
+    jmp call_plot_point_indirect ; one last time
+
+call_plot_point_indirect
+    jmp (plot_point_vector)
 
 plot_prep
 ; input param1 = x coord
@@ -851,6 +878,29 @@ two_params_bytes
     rts
 ++  jmp syntax_error
 
+two_or_three_params_bytes
+    ldx #2
+    stx param4
+    ldy #0
+    lda ($7a),y
+    cmp #$2C
+    bne ++
+    jsr getbytc
+    cmp #$2C
+    bne ++
+    stx param1
+    jsr getbytc
+    stx param2
+    beq +
+    cmp #$2C
+    bne ++
+    jsr getbytc
+    bne ++
+    stx param3
+    inc param4
++   rts
+++  jmp syntax_error
+
 two_params_bytes_string
     ldy #0
     lda ($7a),y
@@ -1044,3 +1094,6 @@ mbit_x
 !byte 64, 16, 4, 1 ; bits 01
 !byte 128, 32, 8, 2 ; bits 10
 !byte 192, 48, 12, 3 ; bits 11
+
+plot_point_vector
+!byte 0, 0
