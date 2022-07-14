@@ -72,8 +72,8 @@ start
     jmp hires_mplot ; plot multi-color point on screen
     jmp hires_fill ; fill graphics with a bit pattern
     jmp set_plot_color ; set color selectively applied to color cells for graphics, or 255 to use existing color cells
-    jmp hires_draw ; draw line on screen
-    ;jmp hires_mdraw ; draw multicolor line on screen
+    jmp hires_draw ; draw line on screen (also undraw, multicolor)
+    jmp hires_rect ; draw/undraw rectangle on screen
 
     ; BRK statements filler for yet to be implemented entry points (256 bytes)
     !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
@@ -221,7 +221,7 @@ hires_draw
     ; param2 = y coordinate
     ; param3 (optional) = multicolor 0,1,2,3 choice, or 255 (unplot hires)
     ; param4 = number of parameters
-
+hires_draw_line
     ; check if out of range
     lda param1
     cmp resx
@@ -346,6 +346,100 @@ hires_draw
     cmp param4
     bne -
     jmp call_plot_point_indirect ; one last time
+
+hires_rect
+    jsr four_or_five_rect_params_bytes
+    ; param1/param2 = first x/y coordinate
+    ; param3/param4 = second x/y coordinate
+    ; param5 = multicolor 0,1,2,3 choice, or 255 (unplot hires), or undefined if 4 parameters
+    ; .A = number of parameters
+
+    ; validate and store parameters
+    cmp #6
+    bcc +
+-   jmp illegal_quantity
++   cmp #4
+    bcc -
+    sbc #2 ; convert to number of parameters will be passing to draw
+    sta rectdrawparams
+    cmp #3
+    bcc ++
+    lda param5
+    cmp #255
+    beq +
+    cmp #4
+    bcs -
++   sta rectdrawcolor
+++  lda param1
+    cmp resx
+    bcs -
+    sta rectx1
+    lda param2
+    cmp resy
+    bcs -
+    sta recty1
+    lda param3
+    cmp resx
+    bcs -
+    sta rectx2
+    lda param4
+    cmp resy
+    bcs -
+    sta recty2
+
+    lda rectx1
+    sta oldx
+    lda recty1
+    sta oldy
+    lda rectx2
+    sta param1
+    lda recty1
+    sta param2
+    lda rectdrawcolor
+    sta param3
+    lda rectdrawparams
+    sta param4
+    jsr hires_draw_line
+
+    lda rectx2
+    sta param1
+    lda recty1
+    sta param2
+    lda rectdrawcolor
+    sta param3
+    lda rectdrawparams
+    sta param4
+    jsr hires_draw_line
+
+    lda rectx2
+    sta param1
+    lda recty2
+    sta param2
+    lda rectdrawcolor
+    sta param3
+    lda rectdrawparams
+    sta param4
+    jsr hires_draw_line
+
+    lda rectx1
+    sta param1
+    lda recty2
+    sta param2
+    lda rectdrawcolor
+    sta param3
+    lda rectdrawparams
+    sta param4
+    jsr hires_draw_line
+
+    lda rectx1
+    sta param1
+    lda recty1
+    sta param2
+    lda rectdrawcolor
+    sta param3
+    lda rectdrawparams
+    sta param4
+    jmp hires_draw_line
 
 call_plot_point_indirect
     jmp (plot_point_vector)
@@ -969,6 +1063,37 @@ five_params_bytes
     rts
 ++  jmp syntax_error
 
+four_or_five_rect_params_bytes
+    ldy #0
+    lda ($7a),y
+    cmp #$2C
+    bne ++
+    jsr getbytc
+    cmp #$2C
+    bne ++
+    stx param1
+    jsr getbytc
+    cmp #$2C
+    bne ++
+    stx param2
+    jsr getbytc
+    cmp #$2C
+    bne ++
+    stx param3
+    jsr getbytc
+    stx param4
+    bne +
+    lda #4 ; number of parameters seen
+    rts
++   cmp #$2C
+    bne ++
+    jsr getbytc
+    bne ++ ; not end of statement
+    stx param5
+    lda #5 ; number of parameters seen
+    rts
+++  jmp syntax_error
+
 petscii_to_screencode 
         cmp #$20
         bcs +++
@@ -1066,6 +1191,13 @@ param2 !byte 0
 param3 !byte 0
 param4 !byte 0
 param5 !byte 0
+
+rectx1 !byte 0
+recty1 !byte 0
+rectx2 !byte 0
+recty2 !byte 0
+rectdrawcolor !byte 0 ; 0/1/2/3 for multicolor, 0 for hires draw, 255 for hires undraw
+rectdrawparams !byte 0 ; param4 for line draw 3=hires draw, 4=multicolor or hires undraw
 
 oldx !byte 0
 oldy !byte 0
