@@ -74,6 +74,8 @@ start
     jmp set_plot_color ; set color selectively applied to color cells for graphics, or 255 to use existing color cells
     jmp hires_draw ; draw line on screen (also undraw, multicolor)
     jmp hires_rect ; draw/undraw rectangle on screen
+    jmp hires_color ; set color of 8x16 tiles on screen relating to rectangle of pixels
+    jmp text_color ; set color of characters on screen relating to col/row to col/row rectangle of characters
 
     ; BRK statements filler for yet to be implemented entry points (256 bytes)
     !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
@@ -440,6 +442,126 @@ hires_rect
     lda rectdrawparams
     sta param4
     jmp hires_draw_line
+
+hires_color
+    jsr five_params_bytes
+    lda param1
+    cmp resx
+    bcc +
+-   jmp illegal_quantity
++   lsr
+    lsr
+    lsr
+    sta param1
+    lda param2
+    cmp resy
+    bcs -
+    lsr
+    lsr
+    lsr
+    lsr
+    sta param2
+    lda param3
+    cmp resx
+    bcs -
+    lsr
+    lsr
+    lsr
+    sta param3
+    lda param4
+    cmp resy
+    bcs -
+    lsr
+    lsr
+    lsr
+    lsr
+    sta param4
+    lda param5
+    cmp #16
+    bcs -
+    ldy cols
+    jmp rect_color
+
+text_color
+    jsr five_params_bytes
+    lda param1
+    cmp #22
+    bcc +
+-   jmp illegal_quantity
++   lda param2
+    cmp #23
+    bcs -
+    lda param3
+    cmp #22
+    bcs -
+    lda param4
+    cmp #23
+    bcs -
+    lda param5
+    cmp #16
+    bcs -
+    ldy #22
+    jmp rect_color
+
+; param1/param2 = x/y first corner cell coordinate
+; param3/param4 = x/y second corner cell coordinate
+; param5 = desired color
+; y = columns on screen
+rect_color
+    sty $58 ; columns on screen
+    sec
+    lda param3
+    sbc param1
+    bcs + ; branch if param3 >= param1
+    ldx param3 ; reorder x coordinates so param3 > param1
+    lda param1
+    stx param1
+    sta param3
+    sec
+    sbc param1
++   sta diffx
+    lda param4
+    sbc param2
+    bcs + ; branch if param4 >= param2
+    ldx param4 ; reorder y coordinats so param4 > param2
+    lda param2
+    stx param2
+    sta param4
+    sec
+    sbc param2
++   sta diffy
+    ; .x = top/left corner color offset to $9400 = param2 * cols + param1
+    tya ; retrieve cols
+    ldx param2
+    jsr multax
+    clc
+    adc param1
+    bcc +
+    inx
++   sta $fb
+    txa
+    clc
+    adc #$94
+    sta $fc
+
+    ; fill one row
+--  lda param5
+    ldy diffx
+-   sta ($fb),y
+    dey
+    bpl -
+
+    ; advance ($fb) pointer one row
+    clc
+    lda $fb
+    adc $58
+    sta $fb
+    bcc +
+    inc $fc
++   dec diffy
+    bpl -- ; repeat
+
+    rts
 
 call_plot_point_indirect
     jmp (plot_point_vector)
