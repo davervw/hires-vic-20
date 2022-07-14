@@ -14,7 +14,7 @@
 ;  10F0-1FFF HIRES Video RAM Bitmap (of characters 0F-FF)
 ; 2000-7FFF Expansion RAM (24K) - recommend relocation of start of BASIC
 ; 8000-8FFF Character ROM (4K)
-; 9000-9FFF I/O space
+; 9000-9FFF I/O space and color RAM (nybbles)
 ; A000-BFFF Cartridge ROM and/or RAM (8K) - HIRES20.ML loaded A000-????
 ; C000-DFFF BASIC ROM
 ; E000-FFFF KERNAL ROM
