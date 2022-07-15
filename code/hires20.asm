@@ -49,6 +49,7 @@ syntax_error=$cf08
 error=$c437
 frmevl=$cd9e
 pulstr=$d6a3
+makadr=$d7f7 ; convert fp to 2 byte integer
 
 chars=$1000
 bitmap_chars_most=240
@@ -76,6 +77,7 @@ start
     jmp hires_rect ; draw/undraw rectangle on screen
     jmp hires_color ; set color of 8x16 tiles on screen relating to rectangle of pixels
     jmp text_color ; set color of characters on screen relating to col/row to col/row rectangle of characters
+    jmp sys_delay ; busy wait for number of jiffies to elapse
 
     ; BRK statements filler for yet to be implemented entry points (256 bytes)
     !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
@@ -502,6 +504,38 @@ text_color
     bcs -
     ldy #22
     jmp rect_color
+
+sys_delay
+    jsr chkcom
+    jsr frmnum
++	jsr makadr	; convert to integer
+
+    ; set alarm with interrupts on during critical part, avoiding rollover
++   clc
+    pha ; save bits 8..15
+	tya ; transfer bits 0..7
+    sei
+    adc $A2
+	sta alarm+2
+    pla ; restore bits 8..15
+    adc $A1
+    sta alarm+1
+    lda $A0
+    cli
+    adc #0
+    sta alarm
+ 
+    ; check for alarm, busy wait, highest byte down, assume interrupts off is fine, will wait for any rollover
+    lda alarm
+-   cmp $A0
+    bne -
+    lda alarm+1
+-   cmp $A1
+    bne -
+    lda alarm+2
+-   cmp $A2
+    bne -
+    rts
 
 ; param1/param2 = x/y first corner cell coordinate
 ; param3/param4 = x/y second corner cell coordinate
@@ -1340,6 +1374,8 @@ plot_color_offset !byte 0
 
 strlen !byte 0
 charrvs !byte 0
+
+alarm !byte 0,0,0
 
 pow7_x !byte 128, 64, 32, 16, 8, 4, 2, 1
 
