@@ -21,6 +21,7 @@ Additional work will be required for non-Windows platforms.
 
 Usage:
 
+    REM REQUIRES 8K expansion at $2000, and 8K expansion at $A000
     LOAD"LOADER",8 : REM LOAD/INIT HIRES20.ML
     RUN
     LOAD"HIRES28",8 : REM DEMO1
