@@ -391,54 +391,28 @@ hires_rect
     bcs -
     sta recty2
 
-    lda rectx1
+    lda rectx2
     sta oldx
-    lda recty1
+    lda recty2
     sta oldy
-    lda rectx2
-    sta param1
-    lda recty1
-    sta param2
-    lda rectdrawcolor
-    sta param3
-    lda rectdrawparams
-    sta param4
-    jsr hires_draw_line
 
-    lda rectx2
-    sta param1
-    lda recty1
-    sta param2
-    lda rectdrawcolor
-    sta param3
-    lda rectdrawparams
-    sta param4
-    jsr hires_draw_line
+    ldx rectx1
+    ldy recty2
+    jsr +
 
-    lda rectx2
-    sta param1
-    lda recty2
-    sta param2
-    lda rectdrawcolor
-    sta param3
-    lda rectdrawparams
-    sta param4
-    jsr hires_draw_line
+    ldx rectx1
+    ldy recty1
+    jsr +
 
-    lda rectx1
-    sta param1
-    lda recty2
-    sta param2
-    lda rectdrawcolor
-    sta param3
-    lda rectdrawparams
-    sta param4
-    jsr hires_draw_line
+    ldx rectx2
+    ldy recty1
+    jsr +
 
-    lda rectx1
-    sta param1
-    lda recty1
-    sta param2
+    ldx rectx2
+    ldy recty2
+
++   stx param1
+    sty param2
     lda rectdrawcolor
     sta param3
     lda rectdrawparams
