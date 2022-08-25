@@ -33,8 +33,8 @@
 ; COLOR [1,[FG][,[BG][,[BD][,AUX]]]] [INVERSE]
 ; COLOR 0|1[,FG] @ X1, Y1 [TO x2, Y2]
 ; DELAY {JIFFIES}
-; SHAPE GET|PUT|OR|XOR|AND|NOT ADDR, X1,Y1 TO X2, Y2
-; PATTERN ADDR @ X1, Y1 TO X2, Y2
+; SHAPE GET|PUT|OR|XOR|AND|NOT {ADDR}, X1,Y1 TO X2, Y2
+; PATTERN {ADDR} @ X1, Y1 TO X2, Y2
 ;
 ; PROPOSED VARIABLES
 ; .XRES
@@ -84,6 +84,7 @@ start
     jmp hires_color ; set color of 8x16 tiles on screen relating to rectangle of pixels
     jmp text_color ; set color of characters on screen relating to col/row to col/row rectangle of characters
     jmp sys_delay ; busy wait for number of jiffies to elapse
+    jmp sys_shape ; get/put shape
 
     ; BRK statements filler for yet to be implemented entry points (256 bytes)
     !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
@@ -515,6 +516,209 @@ sys_delay
     lda alarm+2
 -   cmp $A2
     bne -
+    rts
+
+sys_shape
+    ; get mode
+    jsr getbytc
+    cpx #6
+    bcs +++ ; branch if mode out of range
+    cmp #$2C
+    bne ++
+    stx param5
+    
+    ; get address of shape to get/put
+    jsr chkcom
+    jsr frmnum
++	jsr makadr	; convert to integer
+    sty $fd
+    sta $fe
+    
+    jsr four_params_bytes
+    ; param1,param2 = x1/y1 position on screen (left/top of shape)
+    ; param3,param4 = x2/y2 position on screen (right/bottom of shape)
+
+    ; validate coordinate parameters
+    ; x1 <= x2 < resx
+    ; y1 <= y2 < resy
+    lda param1
+    cmp param3
+    beq +
+    bcs +++
++   lda param2
+    cmp param4
+    beq +
+    bcs +++
++   lda param3
+    cmp resx
+    bcs +++
+    lda param4
+    cmp resy
+    bcs +++
+    jmp get_put_shape
+++  jmp syntax_error
++++ jmp illegal_quantity
+
+; mode GET(0)|PUT(1)|OR(2)|XOR(3)|AND(4)|NOT(5)
+get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mode=param5
+    lda param5
+    cmp #1
+    beq +
+    jmp ++ ; TEMPORARY: exit if not PUT
++
+        ; shift = (X1 AND 7);
+    lda param1
+    and #7
+    sta shift
+    sec
+    lda #8
+    sbc shift
+    sta shiftopposite
+        ; shmask = 255 >> shift;
+    ldx shift
+    lda ff_rshifted,X
+    sta shmask
+        ; columns = int((x2+1-(x1 and 248)+7)/8); // screen columns
+    lda param1
+    and #248
+    eor #$ff ; start 1s complement
+    sec ; complete 1s complement
+    adc #(7+1)
+    clc
+    adc param3
+    lsr
+    lsr
+    lsr
+    sta shcolumns
+
+        ; ys = y2+1-y1;
+    lda param4
+    clc
+    adc #1
+    sec
+    sbc param2
+    sta shys
+
+    ldx param1
+    ldy param2
+    jsr plot_prep ; $fb/$fc has address based on x, y is untouched
+        ; $57/$58 = addr(src)-ys
+    sec
+    lda $fd
+    sbc shys
+    sta $57
+    lda $fe
+    sbc #0
+    sta $58
+        ; do
+        ; {
+---
+        ;   i = 0
+    ldy param2
+    sty shbitmapy
+        ;   if (columns == 1)
+        ;     mask &= 255 << (~X2 AND 7);
+    lda shcolumns
+    cmp #1
+    bne +
+    lda param3
+    and #7
+    tax
+    lda ff_lshiftedrev, x
+    and shmask
+    sta shmask
++
+        ;   do
+        ;   {
+--
+        ;     data = (src[i-ys] << (8-shift)) | (src[i] >> shift);
+    ldy #0
+    lda ($57),y
+    ldx shiftopposite
+    beq +
+-   asl
+    dex
+    bne -
++   sta $59
+    lda ($fd),y
+    ldx shift
+    beq +
+-   lsr
+    dex
+    bne -
++   ora $59
+        ;     dst[i] = (dst[i] & ~mask) | (data & mask); // apply operator, note: can be optimized
+    and shmask
+    sta $59
+    ldy $58
+    lda shmask
+    eor #$ff
+    ldy shbitmapy
+    and ($fb),y
+    ora $59
+    sta ($fb),y
+        ;     ++dst;
+    ; destination handled by inc bitmapy
+        ;     ++src;
+    inc $57
+    bne +
+    inc $58
++   inc $fd
+    bne +
+    inc $fe
++
+        ;   } while (i < ys);
+    cpy param4
+    beq +
+    iny
+    sty shbitmapy
+    bne --
++
+        ;   shmask = 255;
+    lda #$ff
+    sta shmask
+        ;   dst += resy;
+    clc
+    lda $fb
+    adc resy
+    sta $fb
+    bcc +
+    inc $fc
++    
+        ; } while (--columns > 0);
+    dec shcolumns
+    beq ++
+    jmp ---
+++  rts
+
+put_shape_fn
+    sta $ff     ; save shape bits
+    lda ($fd),y ; load from screen
+    and $57     ; keep only bits outside shape area
+    ora $ff     ; combine with shape 
+    sta ($fd),y ; store to screen
+    rts
+
+or_shape_fn
+    ora ($fd),y ; combine with screen
+    sta ($fd),y ; store to screen
+    rts
+
+xor_shape_fn
+    eor ($fd),y ; interact with screen
+    sta ($fd),y ; store to screen
+    rts
+
+and_shape_fn
+    ora $57     ; include bits outside shape area
+    and ($fd),y ; interact with screen
+    sta ($fd),y ; store to screen
+    rts
+
+not_shape_fn
+    eor $57     ; inverse bits inside shape area
+    and ($fd),y ; interact with screen
+    sta ($fd),y ; store to screen
     rts
 
 ; param1/param2 = x/y first corner cell coordinate
@@ -1172,6 +1376,29 @@ three_params_bytes
     rts
 ++  jmp syntax_error
 
+four_params_bytes
+    ldy #0
+    lda ($7a),y
+    cmp #$2C
+    bne ++
+    jsr getbytc
+    cmp #$2C
+    bne ++
+    stx param1
+    jsr getbytc
+    cmp #$2C
+    bne ++
+    stx param2
+    jsr getbytc
+    cmp #$2C
+    bne ++
+    stx param3
+    jsr getbytc
+    bne ++ ; not end of statement
+    stx param4
+    rts
+++  jmp syntax_error
+
 five_params_bytes
     ldy #0
     lda ($7a),y
@@ -1357,7 +1584,18 @@ charrvs !byte 0
 
 alarm !byte 0,0,0
 
+shwidth !byte 0
+shheight !byte 0
+shift !byte 0
+shiftopposite !byte 0
+shmask !byte 0
+shys !byte 0
+shbitmapy !byte 0
+shcolumns !byte 0
+
 pow7_x !byte 128, 64, 32, 16, 8, 4, 2, 1
+ff_rshifted !byte 255, 127, 63, 31, 15, 7, 3, 1
+ff_lshiftedrev !byte 128,192,224,240,248,252,254,255
 
 mbit_x 
 !byte 0, 0, 0, 0 ; bits 00
@@ -1367,3 +1605,5 @@ mbit_x
 
 plot_point_vector
 !byte 0, 0
+
+finis
