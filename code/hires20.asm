@@ -666,11 +666,10 @@ get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mod
     bne +
     inc $fe
 +
-        ;   } while (i < ys);
+        ;   } while (i++ < ys);
     cpy param4
     beq +
-    iny
-    sty shbitmapy
+    inc shbitmapy
     bne --
 +
         ;   shmask = 255;
