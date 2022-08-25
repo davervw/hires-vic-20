@@ -116,55 +116,54 @@ hires_init
 
 draw_text
     jsr two_params_bytes_string
-    jsr plot_prep
 
     ldx strlen
     beq ++ ; check if nothing to do
 
-    txa
+    ; mode=1 PUT
+    lda #1
+    sta param5
+
+    ; y2=y1+7
     clc
-    adc param1
-    cmp resx
-    beq +
-    bcs ++ ; out of range, avoid inadvertant memory overwrites and wrap by exiting
-+   clc
-    tya
-    adc #8
+    lda param2
+    adc #7
+    sta param4
     cmp resy
-    beq +
-    bcs ++ ; out of range, avoid memory overwrites and wrap by exiting
-+
-    ; add y offset to pointer, so can use y for other things
-    clc
-    tya
-    adc $fb
-    sta $fb
-    bcc +
-    inc $fc
-+
--   ldy #0
-    lda ($fd),y
+    bcs ++
+
+    ldy #0
+    sty $60
+
+-   
+    ; x2=x1+7
+    lda param1
+    adc #7
+    sta param3
+    cmp resx
+    bcs ++
+
+    ldy $60
+    lda ($5a),y
     jsr petscii_to_screencode
-    jsr get_screen_char_addr
---  lda ($57),y
-    sta ($fb),y
-    iny
-    cpy #8
-    bne --
+    jsr get_char_addr
+    jsr get_put_shape
+
+    ; x1+=8
     clc
-    lda $fb
-    adc resy
-    sta $fb
-    bcc +
-    inc $fc
-    lda $fc
-    cmp #$20
-    bcs ++ ; branch if dest is out of range, don't write over BASIC RAM
-+   inc $fd
-    bne +
-    inc $fe
-+   dex
+    lda param1
+    adc #8
+    sta param1
+    bcs ++
+    cmp resx
+    bcs ++
+
+    ; ++y
+    inc $60
+
+    dec strlen
     bne -
+
 ++  rts
 
 hires_plot
@@ -1352,8 +1351,8 @@ two_params_bytes_string
 	bpl ++
     jsr pulstr	; pull string from descriptor stack (a=len, x=lo, y=hi addr of string)
     sta strlen
-    stx $fd
-    sty $fe
+    stx $5a
+    sty $5b
     rts
 ++  jmp syntax_error
 
@@ -1493,20 +1492,20 @@ petscii_to_screencode
         adc charrvs
         rts
 
-get_screen_char_addr
-    sta $57
+get_char_addr
+    sta $fd
     txa
     pha
     tya
     pha
-    lda $57
+    lda $fd
     ldx #8
     jsr multax
-    sta $57
+    sta $fd
     clc
     txa
     adc #$80
-    sta $58
+    sta $fe
     pla
     tay
     pla
