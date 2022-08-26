@@ -1,5 +1,5 @@
 ; hires20.asm
-;
+
 ; Commodore Vic-20 High Resolution Graphics BASIC Extension
 ; Copyright (c) 2022 Dave Van Wagner (davevw.com)
 ; MIT LICENSE - see file LICENSE
@@ -35,7 +35,7 @@
 ; DELAY {JIFFIES}
 ; SHAPE GET|PUT|OR|XOR|AND|NOT {ADDR}, X1,Y1 TO X2, Y2
 ; PATTERN {ADDR} @ X1, Y1 TO X2, Y2
-;
+
 ; PROPOSED VARIABLES
 ; .XRES
 ; .YRES
@@ -560,12 +560,42 @@ sys_shape
 
 ; mode GET(0)|PUT(1)|OR(2)|XOR(3)|AND(4)|NOT(5)
 get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mode=param5
-    lda param5
-    cmp #1
-    beq +
-    jmp ++ ; TEMPORARY: exit if not PUT
-+
-        ; shift = (X1 AND 7);
+    ; load function address into $5e/$5f
+    ldx param5
+    cpx #6
+    bcc +
+    jmp ++ ; mode out of range
++   dex
+    bne + 
+    ; mode PUT(1)
+    lda #<put_shape_fn
+    ldy #>put_shape_fn
+    bne +++
++   dex
+    bne + 
+    ; mode OR(2)
+    lda #<or_shape_fn
+    ldy #>or_shape_fn
+    bne +++
++   dex
+    bne + 
+    ; mode XOR(3)
+    lda #<xor_shape_fn
+    ldy #>xor_shape_fn
+    bne +++
++   dex
+    bne + 
+    ; mode AND(4)
+    lda #<and_shape_fn
+    ldy #>and_shape_fn
+    bne +++
++   ; mode NOT(5)
+    lda #<not_shape_fn
+    ldy #>not_shape_fn
++++ sta $5e
+    sty $5f
+
+        ; shift = (X1 AND 7)
     lda param1
     and #7
     sta shift
@@ -573,7 +603,7 @@ get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mod
     lda #8
     sbc shift
     sta shiftopposite
-        ; shmask = 255 >> shift;
+        ; shmask = 255 >> shift
     ldx shift
     lda ff_rshifted,X
     sta shmask
@@ -590,7 +620,7 @@ get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mod
     lsr
     sta shcolumns
 
-        ; ys = y2+1-y1;
+        ; ys = y2+1-y1
     lda param4
     clc
     adc #1
@@ -616,7 +646,7 @@ get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mod
     ldy param2
     sty shbitmapy
         ;   if (columns == 1)
-        ;     mask &= 255 << (~X2 AND 7);
+        ;     mask &= 255 << (~X2 AND 7)
     lda shcolumns
     cmp #1
     bne +
@@ -630,7 +660,7 @@ get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mod
         ;   do
         ;   {
 --
-        ;     data = (src[i-ys] << (8-shift)) | (src[i] >> shift);
+        ;     data = (src[i-ys] << (8-shift)) | (src[i] >> shift)
     ldy #0
     lda ($57),y
     ldx shiftopposite
@@ -645,20 +675,18 @@ get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mod
 -   lsr
     dex
     bne -
-+   ora $59
-        ;     dst[i] = (dst[i] & ~mask) | (data & mask); // apply operator, note: can be optimized
++
+        ;     data &= mask
+    ora $59
     and shmask
     sta $59
-    ldy $58
-    lda shmask
-    eor #$ff
+        ;     dst[i] = (dst[i] & ~mask) | data; // apply operator, note: can be optimized
     ldy shbitmapy
-    and ($fb),y
-    ora $59
-    sta ($fb),y
-        ;     ++dst;
+    jsr call_shape_fn
+
+        ;     ++dst
     ; destination handled by inc bitmapy
-        ;     ++src;
+        ;     ++src
     inc $57
     bne +
     inc $58
@@ -666,16 +694,16 @@ get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mod
     bne +
     inc $fe
 +
-        ;   } while (i++ < ys);
+        ;   } while (i++ < ys)
     cpy param4
     beq +
     inc shbitmapy
     bne --
 +
-        ;   shmask = 255;
+        ;   shmask = 255
     lda #$ff
     sta shmask
-        ;   dst += resy;
+        ;   dst += resy
     clc
     lda $fb
     adc resy
@@ -683,40 +711,57 @@ get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mod
     bcc +
     inc $fc
 +    
-        ; } while (--columns > 0);
+        ; } while (--columns > 0)
     dec shcolumns
     beq ++
     jmp ---
 ++  rts
 
+call_shape_fn
+    jmp ($5e)
+
 put_shape_fn
-    sta $ff     ; save shape bits
-    lda ($fd),y ; load from screen
-    and $57     ; keep only bits outside shape area
-    ora $ff     ; combine with shape 
-    sta ($fd),y ; store to screen
+        ;     dst[i] = (dst[i] & ~mask) | data
+    lda shmask  ; get shape mask
+    eor #$ff    ; inverse mask to keep bits outside shape
+    and ($fb),y ; retrieve screen outside shape
+    ora $59     ; combine with shape image
+    sta ($fb),y ; store to screen
     rts
 
 or_shape_fn
-    ora ($fd),y ; combine with screen
-    sta ($fd),y ; store to screen
+        ;     dst[i] |= data
+    lda $59     ; get shape image
+    ora ($fb),y ; combine with screen
+    sta ($fb),y ; store to screen
     rts
 
 xor_shape_fn
-    eor ($fd),y ; interact with screen
-    sta ($fd),y ; store to screen
+        ;     dst[i] ^= data
+    lda $59     ; get shape image
+    eor ($fb),y ; interact with screen
+    sta ($fb),y ; store to screen
     rts
 
 and_shape_fn
-    ora $57     ; include bits outside shape area
-    and ($fd),y ; interact with screen
-    sta ($fd),y ; store to screen
+        ;    dst[i] &= (~mask | data)
+    lda shmask  ; get shape mask
+    eor #$ff    ; mask bits outside shape area
+    ora $59     ; combine with shape image
+    and ($fb),y ; interact with screen
+    sta ($fb),y ; store to screen
     rts
 
 not_shape_fn
-    eor $57     ; inverse bits inside shape area
-    and ($fd),y ; interact with screen
-    sta ($fd),y ; store to screen
+        ;    dst[i] &= (~mask | ~data)
+    lda $59
+    eor #$ff
+    sta $59
+    lda shmask  ; get shape mask
+    eor #$ff    ; mask bits outside shape area
+    ora $59     ; combine with inverse shape image
+    and ($fb),y ; interact with screen
+    sta ($fb),y ; store to screen
     rts
 
 ; param1/param2 = x/y first corner cell coordinate
