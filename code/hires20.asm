@@ -564,35 +564,35 @@ get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mod
     ldx param5
     cpx #6
     bcc +
-    jmp ++ ; mode out of range
+    jmp +++ ; mode out of range
 +   dex
     bne + 
     ; mode PUT(1)
     lda #<put_shape_fn
     ldy #>put_shape_fn
-    bne +++
+    bne ++
 +   dex
     bne + 
     ; mode OR(2)
     lda #<or_shape_fn
     ldy #>or_shape_fn
-    bne +++
+    bne ++
 +   dex
     bne + 
     ; mode XOR(3)
     lda #<xor_shape_fn
     ldy #>xor_shape_fn
-    bne +++
+    bne ++
 +   dex
     bne + 
     ; mode AND(4)
     lda #<and_shape_fn
     ldy #>and_shape_fn
-    bne +++
+    bne ++
 +   ; mode NOT(5)
     lda #<not_shape_fn
     ldy #>not_shape_fn
-+++ sta $5e
+++  sta $5e
     sty $5f
 
         ; shift = (X1 AND 7)
@@ -662,9 +662,11 @@ get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mod
 --
         ;     data = (src[i-ys] << (8-shift)) | (src[i] >> shift)
     ldy #0
+    lda #0
+    ldx shift ; should be 0..7
+    beq +   ; optimize for speed (skips if shiftopposite is 8)
     lda ($57),y
-    ldx shiftopposite
-    beq +
+    ldx shiftopposite ; due to optimization, should be 7..1
 -   asl
     dex
     bne -
@@ -675,12 +677,11 @@ get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mod
 -   lsr
     dex
     bne -
-+
++   ora $59
         ;     data &= mask
-    ora $59
     and shmask
     sta $59
-        ;     dst[i] = (dst[i] & ~mask) | data; // apply operator, note: can be optimized
+        ;     dst[i] = (dst[i] & ~mask) | data; // apply operator
     ldy shbitmapy
     jsr call_shape_fn
 
@@ -713,9 +714,9 @@ get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mod
 +    
         ; } while (--columns > 0)
     dec shcolumns
-    beq ++
+    beq +++
     jmp ---
-++  rts
++++ rts
 
 call_shape_fn
     jmp ($5e)
