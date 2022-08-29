@@ -19,8 +19,16 @@
 ; C000-DFFF BASIC ROM
 ; E000-FFFF KERNAL ROM
 
+; EXISTING SYNTAX (subject to change)
+; HIRES xr, yr
+; PLOT x, y
+; RECT x1, y1, x2, y2 [,0|1|2|3|255]
+; COLOR fg[+8], bg, bd, aux, inverse
+; DELAY jiffies
+; SHAPE GET|PUT|OR|XOR|AND|NOT addr, x1, y1, x2, y2
+
 ; PROPOSED COMMANDS
-; HIRES 0 CLR
+; HIRES 0 [CLR]
 ; HIRES 1 [,[XR],[YR]][CLR]
 ; PLOT 0|1|2|3,X,Y
 ; PLOT 0|1,"ABC",X,Y [,ADDR, W, H [,W2,H2]]
