@@ -129,9 +129,14 @@ init_basic
 
     jmp crunch_patch
 
+exec_hires
+    jsr exec_two_params_bytes
+    jsr +
+    jmp reloop
+
 hires_init
     jsr two_params_bytes
-    jsr verifyres
++   jsr verifyres
     jsr switch_graphics
     jsr clear_graphics
     jsr fill_video_chars
@@ -190,6 +195,11 @@ draw_text
     bne -
 
 ++  rts
+
+exec_plot
+    jsr exec_two_params_bytes
+    jsr hires_plot_point
+    jmp reloop
 
 hires_plot
     jsr two_params_bytes
@@ -382,6 +392,11 @@ hires_draw_line
     bne -
     jmp call_plot_point_indirect ; one last time
 
+exec_rect
+    jsr exec_four_or_five_rect_params_bytes
+    jsr +
+    jmp reloop
+
 hires_rect
     jsr four_or_five_rect_params_bytes
     ; param1/param2 = first x/y coordinate
@@ -390,7 +405,7 @@ hires_rect
     ; .A = number of parameters
 
     ; validate and store parameters
-    cmp #6
++   cmp #6
     bcc +
 -   jmp illegal_quantity
 +   cmp #4
@@ -548,6 +563,36 @@ sys_delay
     bne -
     rts
 
+parse_shape_op ; convert token to shape operation mode 0..5
+    jsr $0073 ; get next token
+    ldx #0
+    cmp #$A1 ; GET
+    beq +
+    inx
+    cmp #$D0 ; PUT
+    beq +
+    inx
+    cmp #$B0 ; OR
+    beq +
+    inx
+    cmp #$D1 ; XOR
+    beq +
+    inx
+    cmp #$AF ; AND
+    beq +
+    inx
+    cmp #$A8 ; NOT
+    beq +
+    jmp syntax_error
++   stx param5
+    rts
+
+exec_shape
+    jsr parse_shape_op
+    jsr $0073 ; get next token
+    jsr +
+    jmp reloop
+
 sys_shape
     ; get mode
     jsr getbytc
@@ -559,8 +604,8 @@ sys_shape
     
     ; get address of shape to get/put
     jsr chkcom
-    jsr frmnum
-+	jsr makadr	; convert to integer
++   jsr frmnum
+ 	jsr makadr	; convert to integer
     sty $fd
     sta $fe
     
@@ -1242,9 +1287,14 @@ fill_graphics
     bne -
     rts
 
+exec_color
+    jsr exec_five_params_bytes
+    jsr +
+    jmp reloop
+
 color
     jsr five_params_bytes
-    lda param1
++   lda param1
     and #$F0
     bne ++
     lda param2
@@ -1438,12 +1488,16 @@ one_param_byte
     rts
 ++  jmp syntax_error
 
+exec_two_params_bytes
+    ldy #0
+    beq +
+
 two_params_bytes
     ldy #0
     lda ($7a),y
     cmp #$2C
     bne ++
-    jsr getbytc
++   jsr getbytc
     cmp #$2C
     bne ++
     stx param1
@@ -1540,12 +1594,16 @@ four_params_bytes
     rts
 ++  jmp syntax_error
 
+exec_five_params_bytes
+    ldy #0
+    beq +
+
 five_params_bytes
     ldy #0
     lda ($7a),y
     cmp #$2C
     bne ++
-    jsr getbytc
++   jsr getbytc
     cmp #$2C
     bne ++
     stx param1
@@ -1567,12 +1625,16 @@ five_params_bytes
     rts
 ++  jmp syntax_error
 
+exec_four_or_five_rect_params_bytes
+    ldy #0
+    beq +
+
 four_or_five_rect_params_bytes
     ldy #0
     lda ($7a),y
     cmp #$2C
     bne ++
-    jsr getbytc
++   jsr getbytc
     cmp #$2C
     bne ++
     stx param1
@@ -1714,21 +1776,22 @@ execute
 
     cmp #$cc ; HIRES?
     bne +
-    beq +
+    jmp exec_hires
 +	cmp #$cd ; COLOR?
     bne +
-    beq +
+    jmp exec_color
 +   cmp #$ce ; PLOT?
-	beq +
+	bne +
+    jmp exec_plot
 +   cmp #$cf ; SHAPE?
     bne +
-    beq +
+    jmp exec_shape
 +   cmp #$d2 ; PATTERN?
     bne +
     beq +
 +   cmp #$d4 ; RECT?
     bne +
-    beq +
+    jmp exec_rect
 +   cmp #$d5 ; DELAY?
     bne +
     jmp exec_delay
