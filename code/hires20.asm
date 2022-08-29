@@ -82,6 +82,7 @@ start
     jmp text_color ; set color of characters on screen relating to col/row to col/row rectangle of characters
     jmp sys_delay ; busy wait for number of jiffies to elapse
     jmp sys_shape ; get/put shape
+    jmp init_basic ; setup vectors for adding HIRES commands, etc.
 
     ; BRK statements filler for yet to be implemented entry points (256 bytes)
     !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
@@ -101,9 +102,32 @@ start
     !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
     !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
+init_basic
+    lda #<basic_error
+    sta $300
+    lda #>basic_error
+    sta $301
+
+    ; lda #<hires_crunch
+    ; sta $304
+    ; lda #>hires_crunch
+    ; sta $305
+
+    ; lda #<list_tokens
+    ; sta $306
+    ; lda #>list_tokens
+    ; sta $307
+
+    ; lda #<execute
+    ; sta $308
+    ; lda #>execute
+    ; sta $309
+
+    rts
+
 hires_init
     jsr two_params_bytes
-+   jsr verifyres
+    jsr verifyres
     jsr switch_graphics
     jsr clear_graphics
     jsr fill_video_chars
@@ -995,6 +1019,29 @@ plot_addr
 ;     lda pow7_x,x
 ;     rts
 
+switch_text
+    lda #22
+    sta cols
+    lda #23
+    sta rows
+    lda #(23*8)
+    sta resy
+    ldx #0
+    stx param1
+    ldy #0
+    sty param2
+    jsr switch_graphics
+    lda #(23*2)
+    sta 36867
+    lda #$C0
+    sta 36869
+    lda #147 ; clear screen
+    jsr $FFD2
+    lda #0
+    sta resx
+    sta resy
+    rts
+
 switch_graphics
     lda cols
     sta 36866
@@ -1100,8 +1147,11 @@ verifyres
     lda param1
     bne +++
     ldy param2
-    beq illegal_quantity
-    lda #<240*128
+    bne +
+    pla ; throw away return address
+    pla ;   to return to original caller directly
+    jmp switch_text
++   lda #<240*128
     ldx #>240*128
     jsr divaxwithy
     and #$f8
@@ -1619,6 +1669,25 @@ ntsc_or_pal
 +   cmp #$85 ; NTSC=$82, PAL=$9B
     ; carry set for PAL, carry clear for NTSC
     rts
+
+basic_error
+    pha             ; save only .A for now
+    cmp #$81        ; READY
+    beq +           ; skip if no error
+    lda 36867       ; get size of characters
+    and #$01        ; 8x16? hires active?
+    beq +           ; branch if not hires
+    txa             ; save .X and .Y
+    pha
+    tya
+    pha
+    jsr switch_text
+    pla             ; restore .Y and .X
+    tay
+    pla
+    tax
++   pla             ; restore .A last
+    jmp $c43a       ; IERROR - Print BASIC Error Message Routine
 
 save_y  !byte 0
 shiftl !byte 0
