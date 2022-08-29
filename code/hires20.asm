@@ -45,6 +45,9 @@
 ; .PAL
 ; .NTSC
 
+ptrl=$fe
+ptrh=$ff
+
 chkcom=$cefd
 getbytc=$d79b
 frmnum=$cd9e
@@ -53,6 +56,7 @@ error=$c437
 frmevl=$cd9e
 pulstr=$d6a3
 makadr=$d7f7 ; convert fp to 2 byte integer
+listchr=$cb47 ; output a character
 
 chars=$1000
 bitmap_chars_most=240
@@ -108,22 +112,22 @@ init_basic
     lda #>basic_error
     sta $301
 
-    ; lda #<hires_crunch
-    ; sta $304
-    ; lda #>hires_crunch
-    ; sta $305
+    lda #<hires_crunch
+    sta $304
+    lda #>hires_crunch
+    sta $305
 
-    ; lda #<list_tokens
-    ; sta $306
-    ; lda #>list_tokens
-    ; sta $307
+    lda #<list_tokens
+    sta $306
+    lda #>list_tokens
+    sta $307
 
-    ; lda #<execute
-    ; sta $308
-    ; lda #>execute
-    ; sta $309
+    lda #<execute
+    sta $308
+    lda #>execute
+    sta $309
 
-    rts
+    jmp crunch_patch
 
 hires_init
     jsr two_params_bytes
@@ -506,13 +510,19 @@ text_color
     ldy #22
     jmp rect_color
 
+exec_delay
+    jsr $0073
+    jsr +
+    jmp reloop
+
 sys_delay
     jsr chkcom
++
     jsr frmnum
-+	jsr makadr	; convert to integer
+ 	jsr makadr	; convert to integer
 
     ; set alarm with interrupts on during critical part, avoiding rollover
-+   clc
+    clc
     pha ; save bits 8..15
 	tya ; transfer bits 0..7
     sei
@@ -1688,6 +1698,178 @@ basic_error
     tax
 +   pla             ; restore .A last
     jmp $c43a       ; IERROR - Print BASIC Error Message Routine
+
+chktoken               ; re-check last token parsed
+    ldy #0
+    lda ($7A),y
+    sec
+    beq + ; continue
+    cmp #$3a ; colon
++   rts
+
+execute
+    jsr $0073 ; get next token (wedge)
+    beq loop ; end of line or colon
+    bcc loop ; numeric
+
+    cmp #$cc ; HIRES?
+    bne +
+    beq +
++	cmp #$cd ; COLOR?
+    bne +
+    beq +
++   cmp #$ce ; PLOT?
+	beq +
++   cmp #$cf ; SHAPE?
+    bne +
+    beq +
++   cmp #$d2 ; PATTERN?
+    bne +
+    beq +
++   cmp #$d4 ; RECT?
+    bne +
+    beq +
++   cmp #$d5 ; DELAY?
+    bne +
+    jmp exec_delay
++   sec ; non-numeric
+        ; not one of ours, continue with ROM processing
+loop    
+    jmp $c7e7 ; handle token
+
+reloop  
+    jsr chktoken ; verify next token is end of statement
+    beq loop        
+    jmp syntax_error ; syntax error
+
+patch_table
+!byte 0x37, <crunch_start, >crunch_start
+!byte 0x40, <crunch_sbc, >crunch_sbc
+!byte 0x7e, <crunch_get, >crunch_get
+!byte 0x83, <crunch_next, >crunch_next
+!byte 0
+
+crunch_patch
+        ldy #0
+-       lda $c57c,y
+        sta hires_crunch,y
+        iny
+        cpy #$97
+        bne -
+
+        ldy #0
+-       lda patch_table,y
+        beq +
+        tax
+        lda #$20 ; JSR opcode
+        sta hires_crunch,x
+        inx
+        iny
+        lda patch_table,y
+        sta hires_crunch,x
+        inx
+        iny
+        lda patch_table,y
+        sta hires_crunch,x
+        iny
+        bne -
++       rts
+
+crunch_start:
+        lda #<$C09E	; point to original BASIC tokens, low byte
+        sta ptrl
+        lda #>$C09E	; point to original BASIC tokens, high byte
+        sta ptrh
+        STX $7A
+        DEX
+        rts
+crunch_get:		; retrieves character from token table, looking back one index
+        dey
+        lda (ptrl),y
+        iny
+        ora #$00 ; restore N based on A (caller will BPL next)
+        rts
+crunch_next:
+        cpy #$FF ; are we at the end of the last token in the first table?
+        bne + ; no
+        lda #<tokens1 ; update low pointer to next table
+        sta ptrl
+        lda #>tokens1 ; update high pointer to next table
+        sta ptrh
+        iny ; reset index to zero, start of second token table
++       lda (ptrl),y        
+        rts
+crunch_sbc:
+        sbc (ptrl),y
+        rts
+
+list_tokens
+        bit $0F   ; quoted?
+        bmi +     ; if yes, handle normally in ROM
+        cmp #$cc  ; compare to our first token value
+        bcc +     ; skip token if less than ours
+        cmp #$d6  ; compare past our last token value
+        bcc ++    ; branch if our token
++       ora #$00  ; reset Z flag for zero value
+        jmp $c71a ; process other token standard QPLOP
+++      sty $49   ; save index
+        ldy #0
+        sec
+        sbc #$cc
+        tax
+        beq +
+-       lda tokens1,y
+        iny
+        ora #0
+        bpl -
+        dex
+        bne -
+-
++       lda tokens1,y
+        bmi +
+        jsr listchr
+        iny
+        jmp -
++       and #$7f
+        jsr listchr ; output character
+        ldy $49   ; restore index
+        jmp $c700 ; retrieve next token
+
+        ; Vic-20 tokens are C09E-C19D
+tokens1 
+    !text "HIRE"            ; CC
+        !byte "S" OR $80
+    !text "COLO"            ; CD
+        !byte "R" OR $80
+    !text "PLO"             ; CE
+       !byte "T" OR $80
+    !text "SHAP"            ; CF
+        !byte "E" OR $80
+    !text "PU"              ; D0
+      !byte "T" OR $80
+    !text "XO"              ; D1
+      !byte "R" OR $80
+    !text "PATTER"          ; D2
+       !byte "N" OR $80
+    !text "SWA"             ; D3
+       !byte "P" OR $80
+    !text "REC"             ; D4
+       !byte "T" OR $80
+    !text "DELA"            ; D5
+       !byte "Y" OR $80
+    !byte 0                 ; end of table
+
+hires_crunch ; will be copy/patch of Vic-20 BASIC crunch from C57C-C612
+!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+!byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+!byte 0,0,0,0,0,0,0
 
 save_y  !byte 0
 shiftl !byte 0
