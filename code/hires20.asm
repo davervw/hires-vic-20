@@ -562,7 +562,11 @@ sys_shape
 get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mode=param5
     ; load function address into $5e/$5f
     ldx param5
-    cpx #6
+    bne +
+    lda #<get_shape_fn
+    ldy #>get_shape_fn
+    bne ++
++   cpx #6
     bcc +
     jmp +++ ; mode out of range
 +   dex
@@ -619,6 +623,9 @@ get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mod
     lsr
     lsr
     sta shcolumns
+        ; colnum = 0
+    lda #0
+    sta shcolnum
 
         ; ys = y2+1-y1
     lda param4
@@ -645,9 +652,11 @@ get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mod
         ;   i = 0
     ldy param2
     sty shbitmapy
-        ;   if (columns == 1)
+        ;   if (columns - colnum = 1) // last column
         ;     mask &= 255 << (~X2 AND 7)
+    sec
     lda shcolumns
+    sbc shcolnum
     cmp #1
     bne +
     lda param3
@@ -661,8 +670,10 @@ get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mod
         ;   {
 --
         ;     data = (src[i-ys] << (8-shift)) | (src[i] >> shift)
-    ldy #0
+    ldx param5
+    beq ++
     lda #0
+    tay
     ldx shift ; should be 0..7
     beq +   ; optimize for speed (skips if shiftopposite is 8)
     lda ($57),y
@@ -682,7 +693,7 @@ get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mod
     and shmask
     sta $59
         ;     dst[i] = (dst[i] & ~mask) | data; // apply operator
-    ldy shbitmapy
+++  ldy shbitmapy
     jsr call_shape_fn
 
         ;     ++dst
@@ -712,14 +723,43 @@ get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mod
     bcc +
     inc $fc
 +    
-        ; } while (--columns > 0)
-    dec shcolumns
-    beq +++
+        ; } while (++colnum < columns)
+    inc shcolnum
+    lda shcolnum
+    cmp shcolumns
+    bcs +++
     jmp ---
 +++ rts
 
 call_shape_fn
     jmp ($5e)
+
+get_shape_fn
+    lda ($fb),y ; retrieve screen image
+    and shmask  ; mask to shape bits to keep
+    ldy #0
+    ldx shift
+    beq ++      ; optimize for speed when no shifting
+-   asl
+    rol $59
+    dex
+    bne -
+    sta $5c
+    ldx shcolnum
+    beq +       ; skip if at left column
+    ldx shift
+    lda $59
+    and ff_rshiftedrev, x   ; (1<<(x+1))-1
+    sta $59
+    lda ff_rshiftedrev, x
+    eor #$ff                ; ~((1<<(x+1))-1)
+    and ($57),y
+    ora $59
+    sta ($57),y
++   lda $5c
+++  sta ($fd),y
+    ldy shbitmapy
+    rts
 
 put_shape_fn
         ;     dst[i] = (dst[i] & ~mask) | data
@@ -1636,10 +1676,12 @@ shmask !byte 0
 shys !byte 0
 shbitmapy !byte 0
 shcolumns !byte 0
+shcolnum !byte 0
 
 pow7_x !byte 128, 64, 32, 16, 8, 4, 2, 1
 ff_rshifted !byte 255, 127, 63, 31, 15, 7, 3, 1
 ff_lshiftedrev !byte 128,192,224,240,248,252,254,255
+ff_rshiftedrev !byte 0, 1, 3, 7, 15, 31, 63, 127, 255
 
 mbit_x 
 !byte 0, 0, 0, 0 ; bits 00
