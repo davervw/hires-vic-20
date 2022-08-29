@@ -55,6 +55,9 @@ This syntax provides more complete access to low level features (especially unti
 
 </br>
 
+![Demo2 shapes or blit](https://github.com/davervw/hires-vic-20/raw/master/doc/media/demo2/video2.gif)
+4UPART (demo2)
+
 <details>
 <summary>Usage</summary>
 
@@ -62,6 +65,9 @@ This syntax provides more complete access to low level features (especially unti
     LOAD"LOADER",8 : REM LOAD/INIT HIRES20.ML
     RUN
     LOAD"HIRES28",8 : REM DEMO1
+    RUN
+    LOAD"4UPART",8 : REM DEMO2
+    RUN
 
 </details>
 
@@ -83,4 +89,5 @@ Links:
 
 * [Built D64 disk image for Vic-20](https://github.com/davervw/hires-vic-20/raw/master/build/hires20.d64)
 * [Blog: Vic-20 Hi-Res in progress memory layout](https://techwithdave.davevw.com/2022/07/vic-20-hi-res-in-progress-memory-layout.html)
+* [Blog: Vic-20 Hi-Res BASIC extension progress](https://techwithdave.davevw.com/2022/08/vic-20-hi-res-basic-extension-progress.html)
 
