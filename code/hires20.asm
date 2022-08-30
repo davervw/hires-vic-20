@@ -1098,6 +1098,9 @@ switch_text
     sta 36867
     lda #$C0
     sta 36869
+    lda 646
+    and #7  ; mask out multicolor
+    sta 646 ; foreground color
     lda #147 ; clear screen
     jsr $FFD2
     lda #0
