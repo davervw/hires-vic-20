@@ -28,20 +28,21 @@
 ; SHAPE GET|PUT|OR|XOR|AND|NOT addr, x1, y1, x2, y2
 
 ; PROPOSED COMMANDS
-; HIRES 0 [CLR]
-; HIRES 1 [,[XR],[YR]][CLR]
-; PLOT 0|1|2|3,X,Y
-; PLOT 0|1,"ABC",X,Y [,ADDR, W, H [,W2,H2]]
-; PLOT 0|1|2|3 [@ X1, Y1]|[TO X2, Y2][...]
-; RECT 0|1|2|3 @ X1, Y1 TO X2, Y2
-; PLOT COLOR [FG]
-; COLOR [1,[FG][,[BG][,[BD][,AUX]]]] [INVERSE]
-; COLOR 0|1[,FG] @ X1, Y1 [TO x2, Y2]
-; DELAY {JIFFIES}
-; SHAPE GET|PUT|OR|XOR|AND|NOT {ADDR}, X1,Y1 TO X2, Y2
-; PATTERN {ADDR} @ X1, Y1 TO X2, Y2
+; COLOR [fg[+8]][,[bg][,[bd][,aux[,inverse]]]]
+; COLOR [fg[+8]] @ x1,y1 [TO x2,y2]
+; PLOT COLOR fg[+8]|CLR
+; TEXT
+; HIRES xr,yr [CLR]
+; PLOT [[@]x,y]|[TO x,y]...
+; PLOT 0|1|2|3 [,|@ x,y]|[TO x,y]...
+; PLOT [0|1|2|3,]"ABC" @ x,y [,[addr [,width,height]]]
+; RECT [0|1|2|3] @ x1, y1 TO x2, y2
+; DELAY jiffies
+; SHAPE [0|1|2|3] GET|PUT|OR|XOR|AND|NOT addr @ x1,y1 TO x2,y2
+; PATTERN addr @ x1,y1 TO x2,y2
 
 ; PROPOSED VARIABLES
+; .HIRES
 ; .XRES
 ; .YRES
 ; .JOYS
