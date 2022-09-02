@@ -20,6 +20,7 @@
 ; E000-FFFF KERNAL ROM
 
 ; EXISTING SYNTAX (subject to change)
+; TEXT
 ; HIRES xr, yr
 ; PLOT x, y
 ; RECT x1, y1, x2, y2 [,0|1|2|3|255]
@@ -137,6 +138,11 @@ init_basic
     sta $309
 
     jmp crunch_patch
+
+exec_text
+    jsr switch_text
+    jsr $0073
+    jmp reloop
 
 exec_hires
     jsr exec_two_params_bytes
@@ -1807,6 +1813,9 @@ execute
 +   cmp #$d5 ; DELAY?
     bne +
     jmp exec_delay
++   cmp #$d6 ; TEXT?
+    bne +
+    jmp exec_text
 +   sec ; non-numeric
         ; not one of ours, continue with ROM processing
 loop    
@@ -1883,7 +1892,7 @@ list_tokens
         bmi +     ; if yes, handle normally in ROM
         cmp #$cc  ; compare to our first token value
         bcc +     ; skip token if less than ours
-        cmp #$d6  ; compare past our last token value
+        cmp #$d7  ; compare past our last token value
         bcc ++    ; branch if our token
 +       ora #$00  ; reset Z flag for zero value
         jmp $c71a ; process other token standard QPLOP
@@ -1932,6 +1941,8 @@ tokens1
        !byte "T" OR $80
     !text "DELA"            ; D5
        !byte "Y" OR $80
+    !text "TEX"             ; D6
+       !byte "T" OR $80
     !byte 0                 ; end of table
 
 hires_crunch ; will be copy/patch of Vic-20 BASIC crunch from C57C-C612
