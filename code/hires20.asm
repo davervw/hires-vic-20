@@ -21,26 +21,24 @@
 ; C000-DFFF BASIC ROM
 ; E000-FFFF KERNAL ROM
 
-; EXISTING SYNTAX
+; WORKING SYNTAX
 ; COLOR [fg[+8][,[bg][,[bd][,aux[,inverse]]]]
 ; TEXT
+; HIRES xr, yr
 ; DELAY jiffies
 ; PLOT x,y
 ; PLOT [@ x,y][TO x,y]...
-;
-; (minimal syntax, subject to change)
-; HIRES xr, yr
 ; RECT x1, y1, x2, y2 [,0|1|2|3|255]
 ; SHAPE GET|PUT|OR|XOR|AND|NOT addr, x1, y1, x2, y2
 
-; PROPOSED COMMANDS REMAINING
+; PROPOSED SYNTAX REMAINING
 ; COLOR [fg[+8]] @ x1,y1 [TO x2,y2]
-; PLOT COLOR ON|OFF|NOT|CLR
-; HIRES xr,yr [CLR]
-; PLOT 0|1|2|3 [,|@ x,y]|[TO x,y]...
-; PLOT [0|1|2|3,]"ABC" @ x,y [,[addr [,width,height]]]
-; RECT [0|1|2|3] @ x1,y1 TO x2,y2
-; DELAY jiffies
+; PLOT COLOR ON|OFF
+; PLOT 0|1|2|3|NOT|CLR x,y
+; PLOT 0|1|2|3|NOT|CLR [@ x,y]|[TO x,y]...
+; PLOT [0|1|2|3 ,] "ABC" @ x,y [,[addr [,width,height]]]
+; RECT NOT|CLR [@] x1,y1 TO x2,y2
+; RECT 0|1|2|3 @ x1,y1 TO x2,y2
 ; SHAPE [0|1|2|3] GET|PUT|OR|XOR|AND|NOT|CLR addr @ x1,y1 TO x2,y2
 ; PATTERN addr @ x1,y1 TO x2,y2
 
@@ -2029,7 +2027,7 @@ list_tokens
         bmi +     ; if yes, handle normally in ROM
         cmp #$cc  ; compare to our first token value
         bcc +     ; skip token if less than ours
-        cmp #$d7  ; compare past our last token value
+        cmp #$d8  ; compare past our last token value
         bcc ++    ; branch if our token
 +       ora #$00  ; reset Z flag for zero value
         jmp $c71a ; process other token standard QPLOP
@@ -2080,6 +2078,8 @@ tokens1
        !byte "Y" OR $80
     !text "TEX"             ; D6
        !byte "T" OR $80
+    !text "OF"              ; D7
+       !byte "F" OR $80
     !byte 0                 ; end of table
 
 hires_crunch ; will be copy/patch of Vic-20 BASIC crunch from C57C-C612

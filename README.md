@@ -6,13 +6,14 @@ written in 6502 Assembly.  This is an original work leveraging my [HIRES for C64
 ### Command syntax ###
 _(work in progress, subject to change)_
 
+    COLOR [foreground[+8][,[background][,[border][,auxillary[,inverse]]]]]
     TEXT
-    HIRES xres, yres
-    PLOT x, y
-    RECT x1, y1, x2, y2 [,0|1|2|3|255]
-    COLOR [fg[+8]][,[bg][,[bd][,aux[,inverse]]]]
+    HIRES xresolution, yresolution
     DELAY jiffies
-    SHAPE GET|PUT|OR|XOR|AND|NOT addr, x1, y1, x2, y2
+    PLOT x, y
+    PLOT [@ x,y][TO x,y]...
+    RECT x1,y1, x2,y2 [,0|1|2|3|255]
+    SHAPE GET|PUT|OR|XOR|AND|NOT address, x1, y1, x2, y2
 
 <details>
 <summary>SYS syntax</summary>
