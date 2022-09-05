@@ -21,27 +21,27 @@
 ; C000-DFFF BASIC ROM
 ; E000-FFFF KERNAL ROM
 
-; EXISTING SYNTAX (subject to change)
+; EXISTING SYNTAX
+; COLOR [fg[+8][,[bg][,[bd][,aux[,inverse]]]]
 ; TEXT
-; HIRES xr, yr
-; PLOT x, y
-; RECT x1, y1, x2, y2 [,0|1|2|3|255]
-; COLOR fg[+8], bg, bd, aux, inverse
 ; DELAY jiffies
+; PLOT x,y
+; PLOT [@ x,y][TO x,y]...
+;
+; (minimal syntax, subject to change)
+; HIRES xr, yr
+; RECT x1, y1, x2, y2 [,0|1|2|3|255]
 ; SHAPE GET|PUT|OR|XOR|AND|NOT addr, x1, y1, x2, y2
 
-; PROPOSED COMMANDS
-; COLOR [fg[+8]][,[bg][,[bd][,aux[,inverse]]]]
+; PROPOSED COMMANDS REMAINING
 ; COLOR [fg[+8]] @ x1,y1 [TO x2,y2]
-; PLOT COLOR fg[+8]|CLR
-; TEXT
+; PLOT COLOR ON|OFF|NOT|CLR
 ; HIRES xr,yr [CLR]
-; PLOT [[@]x,y]|[TO x,y]...
 ; PLOT 0|1|2|3 [,|@ x,y]|[TO x,y]...
 ; PLOT [0|1|2|3,]"ABC" @ x,y [,[addr [,width,height]]]
-; RECT [0|1|2|3] @ x1, y1 TO x2, y2
+; RECT [0|1|2|3] @ x1,y1 TO x2,y2
 ; DELAY jiffies
-; SHAPE [0|1|2|3] GET|PUT|OR|XOR|AND|NOT addr @ x1,y1 TO x2,y2
+; SHAPE [0|1|2|3] GET|PUT|OR|XOR|AND|NOT|CLR addr @ x1,y1 TO x2,y2
 ; PATTERN addr @ x1,y1 TO x2,y2
 
 ; PROPOSED VARIABLES
@@ -214,9 +214,38 @@ draw_text
 ++  rts
 
 exec_plot
-    jsr exec_two_params_bytes
+    ; gobble optional @
+    jsr lookahead
+    cmp #$A4 ; TO token
+    bne +
+    jsr $0073
+    bne ++
++   cmp #$40
+    bne +++
+    jsr $0073
+    jmp +++
+--  ; loop:
+    cmp #$A4 ; TO token
+    bne +
+++  jsr next_two_bytes
+    php
+    pha
+    lda #2
+    sta param4
+    jsr hires_draw_line
+-   pla
+    plp
+    bne --
+    beq ++
++   cmp #$40 ; @ token
+    bne +
++++ jsr next_two_bytes
+    php
+    pha
     jsr hires_plot_point
-    jmp reloop
+    jmp -
++   jmp syntax_error
+++  jmp reloop
 
 hires_plot
     jsr two_params_bytes
@@ -1547,6 +1576,16 @@ two_params_bytes
     stx param1
     jsr getbytc
     bne ++
+    stx param2
+    rts
+++  jmp syntax_error
+
+next_two_bytes
++   jsr getbytc
+    cmp #$2C
+    bne ++
+    stx param1
+    jsr getbytc
     stx param2
     rts
 ++  jmp syntax_error
