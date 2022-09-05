@@ -7,6 +7,7 @@ written in 6502 Assembly.  This is an original work leveraging my [HIRES for C64
 _(work in progress, subject to change)_
 
     COLOR [foreground[+8][,[background][,[border][,[auxillary][,inverse]]]]]
+    COLOR [fg[+8]] @ x1,y1 [TO x2,y2]
     TEXT
     HIRES xresolution, yresolution
     DELAY jiffies

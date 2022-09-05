@@ -23,6 +23,7 @@
 
 ; WORKING SYNTAX
 ; COLOR [fg[+8][,[bg][,[bd][,aux[,inverse]]]]]
+; COLOR [fg[+8]] @ x1,y1 [TO x2,y2]
 ; TEXT
 ; HIRES xr, yr
 ; DELAY jiffies
@@ -33,7 +34,6 @@
 ; SHAPE GET|PUT|OR|XOR|AND|NOT addr, x1, y1, x2, y2
 
 ; PROPOSED SYNTAX REMAINING
-; COLOR [fg[+8]] @ x1,y1 [TO x2,y2]
 ; PLOT 0|1|2|3|NOT|CLR x,y
 ; PLOT 0|1|2|3|NOT|CLR [@ x,y]|[TO x,y]...
 ; PLOT [0|1|2|3 ,] "ABC" @ x,y [,[addr [,width,height]]]
@@ -527,6 +527,7 @@ hires_rect
 
 hires_color
     jsr five_params_bytes
+hires_color_at
     lda param1
     cmp resx
     bcc +
@@ -566,6 +567,7 @@ hires_color
 
 text_color
     jsr five_params_bytes
+text_color_at
     lda param1
     cmp #22
     bcc +
@@ -1376,11 +1378,53 @@ exec_color
 
     ; if any parameters present, store them over the current values
     jsr exec_five_optional_params_bytes
-    lda plot_color
+
+    ; @ syntax for coloring region?
+    cmp #$40
+    bne +++ ; no - color jump to color registers
+    ; yes @ syntax
+    lda param_count
+    cmp #1
+    beq +
+-   jmp syntax_error   
++   lda param1
+++  pha
+    jsr next_two_bytes
+    ; copy param1/2 to param3/4
+    ldx param1
+    ldy param2
+    stx param3
+    sty param4
+    cmp #$A4 ; TO token
+    bne +
+    jsr next_two_bytes
+    jmp ++ ; continue
++   cmp #$00 ; end of statement
+    beq +
+    cmp #$3a ; colon - end of statement
+    bne -
++   ; copy param3/4 to param1/2
+    ldx param3
+    ldy param4
+    stx param1
+    sty param2
+++  pla
+    sta param5
+    lda $9003
+    and #1
+    bne +
+    jsr text_color_at
+    jmp reloop
++   jsr hires_color_at
+    jmp reloop
+
+    ; check and set plot color if necessary
++++ lda plot_color
     bmi + ; plot color not on
-    ; plot color on, so reset if necessary
+    ; plot color on, so stash the forground color
     lda param1
     sta plot_color
+
 +   jsr +
     jmp reloop
 
@@ -1781,6 +1825,7 @@ exec_five_optional_params_bytes
     beq +
     cmp #$40
     bne -
+    beq +
 ++  jmp syntax_error
 +   rts
 
@@ -1788,7 +1833,8 @@ commaorbyte
         jsr lookahead ; (past comma)
         cmp #$00 ; end of line
         bne +
--       clc
+-       jsr $0073
+        clc
         rts
 +       cmp #$3a ; colon
         beq -
