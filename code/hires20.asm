@@ -4,6 +4,8 @@
 ; Copyright (c) 2022 Dave Van Wagner (davevw.com)
 ; MIT LICENSE - see file LICENSE
 
+; Thanks to https://archive.org/details/COMPUTEs_Mapping_the_VIC_1984_COMPUTE_Publications
+
 ; memory map
 ; 0000-03FF Low RAM (1K)
 ; 0400-0FFF RAM Expansion (3K)
@@ -1306,7 +1308,31 @@ fill_graphics
     rts
 
 exec_color
-    jsr exec_five_params_bytes
+    ; load parameters
+    lda 646
+    sta param1
+    ldx #0
+    lda $900F
+    lsr
+    lsr
+    lsr
+    lsr
+    bcs +
+    inx
++   stx param5
+    sta param2
+    lda $900F
+    and #7
+    sta param3
+    lda $900E
+    lsr
+    lsr
+    lsr
+    lsr
+    sta param4
+
+    ; if any parameters present, store them over the current values
+    jsr exec_five_optional_params_bytes
     jsr +
     jmp reloop
 
@@ -1678,6 +1704,78 @@ four_or_five_rect_params_bytes
     rts
 ++  jmp syntax_error
 
+exec_five_optional_params_bytes
+    ldy #0
+    sty param_count
+-   jsr commaorbyte
+    pha
+    inc param_count
+    bcc +
+    ldy param_count
+    cpy #6
+    bcs ++
+    txa
+    sta param1-1, y
++   pla
+    cmp #0
+    beq +
+    cmp #$3a
+    beq +
+    cmp #$40
+    bne -
+++  jmp syntax_error
++   rts
+
+commaorbyte
+        jsr lookahead ; (past comma)
+        cmp #$00 ; end of line
+        bne +
+-       clc
+        rts
++       cmp #$3a ; colon
+        beq -
+        cmp #$40 ; @
+        beq -
+        cmp #$2c ; comma
+        bne +
+        jsr $0073 ; get token
+        bne ++
+-       pla
+        pla
+        jmp syntax_error
+++      clc
+        ldx #0
+        rts
++       jsr getbytc
+        beq +
+        cmp #$2c ; comma
+        beq +
+        cmp #$40 ; @
+        bne -
++       sec
+        rts
+
+lookahead
+        ldy #0
+        lda ($7A),y
+        beq +		; branch if end of line
+    	cmp #$3a	; colon
+    	beq +		; branch if end of statement
+        lda $7A
+        sta ptrl
+        lda $7B
+        sta ptrh
+        jsr $0073
+        php
+        pha
+        lda ptrl
+        sta $7A
+        lda ptrh
+        sta $7B
+        pla
+        plp
++       rts
+
 petscii_to_screencode 
         cmp #$20
         bcs +++
@@ -1972,6 +2070,7 @@ param2 !byte 0
 param3 !byte 0
 param4 !byte 0
 param5 !byte 0
+param_count !byte 0
 
 rectx1 !byte 0
 recty1 !byte 0
