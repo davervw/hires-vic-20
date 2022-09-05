@@ -22,18 +22,18 @@
 ; E000-FFFF KERNAL ROM
 
 ; WORKING SYNTAX
-; COLOR [fg[+8][,[bg][,[bd][,aux[,inverse]]]]
+; COLOR [fg[+8][,[bg][,[bd][,aux[,inverse]]]]]
 ; TEXT
 ; HIRES xr, yr
 ; DELAY jiffies
 ; PLOT x,y
 ; PLOT [@ x,y][TO x,y]...
+; PLOT COLOR ON|OFF
 ; RECT x1, y1, x2, y2 [,0|1|2|3|255]
 ; SHAPE GET|PUT|OR|XOR|AND|NOT addr, x1, y1, x2, y2
 
 ; PROPOSED SYNTAX REMAINING
 ; COLOR [fg[+8]] @ x1,y1 [TO x2,y2]
-; PLOT COLOR ON|OFF
 ; PLOT 0|1|2|3|NOT|CLR x,y
 ; PLOT 0|1|2|3|NOT|CLR [@ x,y]|[TO x,y]...
 ; PLOT [0|1|2|3 ,] "ABC" @ x,y [,[addr [,width,height]]]
@@ -214,7 +214,22 @@ draw_text
 exec_plot
     ; gobble optional @
     jsr lookahead
-    cmp #$A4 ; TO token
+    cmp #$CD ; COLOR token
+    bne ++
+    jsr $0073
+    jsr $0073
+    beq ++++
+    cmp #$91 ; ON token
+    bne +
+    lda 646
+    jmp +++
++   cmp #$D7 ; OFF token
+    bne ++++
+    lda #$FF
++++ sta plot_color
+    jsr $0073
+    jmp reloop
+++  cmp #$A4 ; TO token
     bne +
     jsr $0073
     bne ++
@@ -242,6 +257,7 @@ exec_plot
     pha
     jsr hires_plot_point
     jmp -
+++++
 +   jmp syntax_error
 ++  jmp reloop
 
@@ -1360,7 +1376,12 @@ exec_color
 
     ; if any parameters present, store them over the current values
     jsr exec_five_optional_params_bytes
-    jsr +
+    lda plot_color
+    bmi + ; plot color not on
+    ; plot color on, so reset if necessary
+    lda param1
+    sta plot_color
++   jsr +
     jmp reloop
 
 color
