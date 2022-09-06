@@ -27,8 +27,8 @@
 ; TEXT
 ; HIRES xr, yr
 ; DELAY jiffies
-; PLOT x,y
-; PLOT [@ x,y][TO x,y]...
+; PLOT [NOT|CLR] x,y
+; PLOT [NOT|CLR] [NOT|CLR] [@ x,y][TO x,y]...
 ; PLOT COLOR ON|OFF
 ; RECT x1, y1, x2, y2 [,0|1|2|3|255]
 ; SHAPE GET|PUT|OR|XOR|AND|NOT addr, x1, y1, x2, y2
@@ -37,7 +37,7 @@
 ; PLOT 0|1|2|3|NOT|CLR x,y
 ; PLOT 0|1|2|3|NOT|CLR [@ x,y]|[TO x,y]...
 ; PLOT [0|1|2|3 ,] "ABC" @ x,y [,[addr [,width,height]]]
-; RECT NOT|CLR [@] x1,y1 TO x2,y2
+; RECT [NOT|CLR] [@] x1,y1 TO x2,y2
 ; RECT 0|1|2|3 @ x1,y1 TO x2,y2
 ; SHAPE [0|1|2|3] GET|PUT|OR|XOR|AND|NOT|CLR addr @ x1,y1 TO x2,y2
 ; PATTERN addr @ x1,y1 TO x2,y2
@@ -212,31 +212,47 @@ draw_text
 ++  rts
 
 exec_plot
-    ; gobble optional @
+    lda #$0
+    sta plot_not
+
     jsr lookahead
-    cmp #$CD ; COLOR token
+
+    cmp #$A8 ; NOT
+    beq +
+    cmp #$9C ; CLR
     bne ++
++   jsr $0073
+    dec plot_not
+    jsr lookahead
+
+++  cmp #$CD ; COLOR token
+    bne ++ ; branch not color
+    ; PLOT COLOR ON|OFF
     jsr $0073
     jsr $0073
-    beq ++++
-    cmp #$91 ; ON token
+    bne +
+--- jmp syntax_error
++   cmp #$91 ; ON token
     bne +
     lda 646
     jmp +++
 +   cmp #$D7 ; OFF token
-    bne ++++
+    bne ---
     lda #$FF
 +++ sta plot_color
     jsr $0073
     jmp reloop
+
 ++  cmp #$A4 ; TO token
-    bne +
+    bne + ; branch not to
     jsr $0073
-    bne ++
-+   cmp #$40
-    bne +++
-    jsr $0073
+    bne ++ ; should always branch
+
++   cmp #$40 ; @ token
+    bne +++ ; optional @ not there, just get coordinates
+    jsr $0073 ; gobble optional @
     jmp +++
+
 --  ; loop:
     cmp #$A4 ; TO token
     bne +
@@ -245,21 +261,26 @@ exec_plot
     pha
     lda #2
     sta param4
-    jsr hires_draw_line
+    lda plot_not
+    bpl ++
+    sta param3
+    inc param4
+++  jsr hires_draw_line
 -   pla
     plp
     bne --
-    beq ++
+    jmp reloop  
 +   cmp #$40 ; @ token
-    bne +
+    bne ---
 +++ jsr next_two_bytes
     php
     pha
-    jsr hires_plot_point
+    lda plot_not
+    bpl +
+    jsr hires_unplot_point
     jmp -
-++++
-+   jmp syntax_error
-++  jmp reloop
++   jsr hires_plot_point
+    jmp -
 
 hires_plot
     jsr two_params_bytes
@@ -2201,6 +2222,7 @@ cols !byte 0
 rows !byte 0
 plot_color !byte 255
 plot_color_offset !byte 0
+plot_not !byte 0
 
 strlen !byte 0
 charrvs !byte 0
