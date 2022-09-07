@@ -32,7 +32,7 @@
 ; PLOT COLOR ON|OFF
 ; RECT [NOT|CLR] [@] x1,y1 TO x2,y2
 ; RECT 0|1|2|3 @ x1,y1 TO x2,y2
-; SHAPE GET|PUT|OR|XOR|AND|NOT addr, x1, y1, x2, y2
+; SHAPE GET|PUT|OR|XOR|AND|NOT|CLR addr, x1, y1, x2, y2
 
 ; PROPOSED SYNTAX REMAINING
 ; PLOT 0|1|2|3|NOT|CLR x,y
@@ -714,6 +714,8 @@ parse_shape_op ; convert token to shape operation mode 0..5
     beq +
     inx
     cmp #$A8 ; NOT
+    beq +
+    cmp #$9C ; CLR synonym for NOT
     beq +
     jmp syntax_error
 +   stx param5
