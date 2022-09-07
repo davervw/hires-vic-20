@@ -11,7 +11,7 @@ _(work in progress, subject to change)_
     TEXT
     HIRES xresolution, yresolution
     DELAY jiffies
-    PLOT [NOT|CLR] x, y
+    PLOT [NOT|CLR] [@] x, y
     PLOT [NOT|CLR] [@ x,y][TO x,y]...
     PLOT COLOR ON|OFF
     RECT [NOT|CLR] [@] x1,y1 TO x2,y2

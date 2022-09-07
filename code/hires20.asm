@@ -27,15 +27,15 @@
 ; TEXT
 ; HIRES xr, yr
 ; DELAY jiffies
-; PLOT [NOT|CLR] x,y
-; PLOT [NOT|CLR] [NOT|CLR] [@ x,y][TO x,y]...
+; PLOT [NOT|CLR] [@] x,y
+; PLOT [NOT|CLR] [@ x,y][TO x,y]...
 ; PLOT COLOR ON|OFF
 ; RECT [NOT|CLR] [@] x1,y1 TO x2,y2
 ; RECT 0|1|2|3 @ x1,y1 TO x2,y2
 ; SHAPE GET|PUT|OR|XOR|AND|NOT|CLR addr, x1, y1, x2, y2
 
 ; PROPOSED SYNTAX REMAINING
-; PLOT 0|1|2|3|NOT|CLR x,y
+; PLOT 0|1|2|3 @ x,y
 ; PLOT 0|1|2|3|NOT|CLR [@ x,y]|[TO x,y]...
 ; PLOT [0|1|2|3 ,] "ABC" @ x,y [,[addr [,width,height]]]
 ; SHAPE [0|1|2|3] GET|PUT|OR|XOR|AND|NOT|CLR addr @ x1,y1 TO x2,y2
