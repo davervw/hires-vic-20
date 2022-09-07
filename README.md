@@ -6,17 +6,19 @@ written in 6502 Assembly.  This is an original work leveraging my [HIRES for C64
 ### Command syntax ###
 _(work in progress, subject to change)_
 
-    COLOR [foreground[+8][,[background][,[border][,[auxillary][,inverse]]]]]
-    COLOR [fg[+8]] @ x1,y1 [TO x2,y2]
+    COLOR [foreground[+8][,[background][,[border][,auxillary[,inverse]]]]]
+    COLOR [foreground[+8]] @ x1,y1 [TO x2,y2]
     TEXT
-    HIRES xresolution, yresolution
+    HIRES xr, yr
     DELAY jiffies
-    PLOT [NOT|CLR] [@] x, y
-    PLOT [NOT|CLR] [@ x,y][TO x,y]...
+    PLOT [NOT|CLR] (@ x1,y1)|(TO x2,y2)...    **
+    PLOT 0|1|2|3 (@ x1,y1)|(TO x2,y2)...
     PLOT COLOR ON|OFF
     RECT [NOT|CLR] [@] x1,y1 TO x2,y2
     RECT 0|1|2|3 @ x1,y1 TO x2,y2
-    SHAPE GET|PUT|OR|XOR|AND|NOT|CLR address, x1, y1, x2, y2
+    SHAPE GET|PUT|OR|XOR|AND|NOT|CLR addr, x1, y1, x2, y2
+
+    ** only first @ optional, when not multi-color
 
 <details>
 <summary>SYS syntax</summary>
@@ -24,7 +26,7 @@ _(work in progress, subject to change)_
 This syntax provides more complete access to low level features (especially until BASIC syntax implemented)
 
     SYS 40960, xres, yres : REM switch to graphics at resolution, may zero one axis, result in .X, .Y
-    ; specify both zeros to switch back to text
+        REM specify both zeros to switch back to text
     POKE 780, n1:POKE 781, n2:SYS 40963 : REM multiply .A and .X (shift/add method), result in .A(low),.X(high)
     POKE 780,781,782...:SYS 40966 : REM divide 16-bit(.A,.X) by .Y, result in .A(low), .X(high)
     SYS 40969 : REM get division remainder, result in .A(low), .X(high)

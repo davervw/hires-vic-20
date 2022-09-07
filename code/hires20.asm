@@ -27,16 +27,13 @@
 ; TEXT
 ; HIRES xr, yr
 ; DELAY jiffies
-; PLOT [NOT|CLR] [@] x,y
-; PLOT [NOT|CLR] [@ x,y][TO x,y]...
+; PLOT [0|1|2|3|NOT|CLR] (@ x1,y1)|(TO x2,y2)...     (** first @ optional if not multicolor) 
 ; PLOT COLOR ON|OFF
 ; RECT [NOT|CLR] [@] x1,y1 TO x2,y2
 ; RECT 0|1|2|3 @ x1,y1 TO x2,y2
 ; SHAPE GET|PUT|OR|XOR|AND|NOT|CLR addr, x1, y1, x2, y2
 
 ; PROPOSED SYNTAX REMAINING
-; PLOT 0|1|2|3 @ x,y
-; PLOT 0|1|2|3|NOT|CLR [@ x,y]|[TO x,y]...
 ; PLOT [0|1|2|3 ,] "ABC" @ x,y [,[addr [,width,height]]]
 ; SHAPE [0|1|2|3] GET|PUT|OR|XOR|AND|NOT|CLR addr @ x1,y1 TO x2,y2
 ; PATTERN addr @ x1,y1 TO x2,y2
@@ -211,21 +208,13 @@ draw_text
 ++  rts
 
 exec_plot
-    lda #$0
-    sta plot_not
+    lda #128
+    sta plot_mode  ; assume monochrome set pixel
 
     jsr lookahead
 
-    cmp #$A8 ; NOT token
-    beq +
-    cmp #$9C ; CLR token
-    bne ++
-+   jsr $0073
-    dec plot_not
-    jsr lookahead
-
-++  cmp #$CD ; COLOR token
-    bne ++ ; branch not color
+    cmp #$CD ; COLOR token
+    bne +++ ; branch not color
     ; PLOT COLOR ON|OFF
     jsr $0073
     jsr $0073
@@ -234,13 +223,23 @@ exec_plot
 +   cmp #$91 ; ON token
     bne +
     lda 646
-    jmp +++
+    jmp ++
 +   cmp #$D7 ; OFF token
     bne ---
     lda #$FF
-+++ sta plot_color
+++  sta plot_color
     jsr $0073
     jmp reloop
+
+    ; optional NOT/CLR for erasing monochrome pixel
++++ cmp #$A8 ; NOT token
+    beq +
+    cmp #$9C ; CLR token
+    bne ++
++   jsr $0073
+    lda #$FF
+    sta plot_mode
+    jsr lookahead
 
 ++  cmp #$A4 ; TO token
     bne + ; branch not to
@@ -248,37 +247,70 @@ exec_plot
     bne ++ ; should always branch
 
 +   cmp #$40 ; @ token
-    bne +++ ; optional @ not there, just get coordinates
+    bne +
     jsr $0073 ; gobble optional @
     jmp +++
 
+    ; no optional @ (yet)
++   lda plot_mode
+    cmp #$FF
+    beq +++ ; NOT/CLR seen, but not TO, so must be coordinate
+    ; so look for coordinate or multicolor choice
+    jsr getbytc
+    cmp #$A4 ; TO token?
+    bne +
+    stx plot_mode
+    beq ++
++   cmp #$40 ; @ required after multicolor choice
+    bne + ; must be coordinate instead
+    stx plot_mode
+    jmp +++ ; go get coordinate after @
+
+    ; we got first coordinate, now go for second
++   cmp #$2c
+    bne --- ; syntax error if no comma
+    stx param1
+    jsr getbytc
+    stx param2
+    jmp ++++
+
 --  ; loop:
     cmp #$A4 ; TO token
-    bne +
+    bne ++
 ++  jsr next_two_bytes
     php
     pha
-    lda #2
+    lda #3
     sta param4
-    lda plot_not
-    bpl ++
+    lda plot_mode
     sta param3
-    inc param4
-++  jsr hires_draw_line
+    cmp #$80
+    bne +
+    dec param4
++   jsr hires_draw_line
 -   pla
     plp
     bne --
     jmp reloop  
-+   cmp #$40 ; @ token
-    bne ---
-+++ jsr next_two_bytes
+++  cmp #$40 ; @ token
+    beq +++
+    jmp ---
++++ 
+    jsr next_two_bytes
+++++
     php
     pha
-    lda plot_not
-    bpl +
+    lda plot_mode
+    cmp #$ff
++   bne +
     jsr hires_unplot_point
     jmp -
-+   jsr hires_plot_point
++   cmp #$80
+    bne +
+    jsr hires_plot_point
+    jmp -
++   sta param3
+    jsr hires_mplot_point
     jmp -
 
 hires_plot
@@ -2264,7 +2296,7 @@ cols !byte 0
 rows !byte 0
 plot_color !byte 255
 plot_color_offset !byte 0
-plot_not !byte 0
+plot_mode !byte 0 ; multi-color 0,1,2,3, or inverse ($FF) or normal ($80)
 
 strlen !byte 0
 charrvs !byte 0
