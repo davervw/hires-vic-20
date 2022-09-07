@@ -1466,18 +1466,13 @@ exec_color
     stx param3
     sty param4
     cmp #$A4 ; TO token
-    bne +
-    jsr next_two_bytes
-    jmp ++ ; continue
-+   cmp #$00 ; end of statement
     beq +
+    cmp #$00 ; end of statement
+    beq ++
     cmp #$3a ; colon - end of statement
+    beq ++
     bne -
-+   ; copy param3/4 to param1/2
-    ldx param3
-    ldy param4
-    stx param1
-    sty param2
++   jsr next_two_bytes ; fill param1/2
 ++  pla
     sta param5
     lda $9003
