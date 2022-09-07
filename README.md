@@ -14,7 +14,8 @@ _(work in progress, subject to change)_
     PLOT [NOT|CLR] x, y
     PLOT [NOT|CLR] [@ x,y][TO x,y]...
     PLOT COLOR ON|OFF
-    RECT x1,y1, x2,y2 [,0|1|2|3|255]
+    RECT [NOT|CLR] [@] x1,y1 TO x2,y2
+    RECT 0|1|2|3 @ x1,y1 TO x2,y2
     SHAPE GET|PUT|OR|XOR|AND|NOT address, x1, y1, x2, y2
 
 <details>

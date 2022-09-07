@@ -30,15 +30,14 @@
 ; PLOT [NOT|CLR] x,y
 ; PLOT [NOT|CLR] [NOT|CLR] [@ x,y][TO x,y]...
 ; PLOT COLOR ON|OFF
-; RECT x1, y1, x2, y2 [,0|1|2|3|255]
+; RECT [NOT|CLR] [@] x1,y1 TO x2,y2
+; RECT 0|1|2|3 @ x1,y1 TO x2,y2
 ; SHAPE GET|PUT|OR|XOR|AND|NOT addr, x1, y1, x2, y2
 
 ; PROPOSED SYNTAX REMAINING
 ; PLOT 0|1|2|3|NOT|CLR x,y
 ; PLOT 0|1|2|3|NOT|CLR [@ x,y]|[TO x,y]...
 ; PLOT [0|1|2|3 ,] "ABC" @ x,y [,[addr [,width,height]]]
-; RECT [NOT|CLR] [@] x1,y1 TO x2,y2
-; RECT 0|1|2|3 @ x1,y1 TO x2,y2
 ; SHAPE [0|1|2|3] GET|PUT|OR|XOR|AND|NOT|CLR addr @ x1,y1 TO x2,y2
 ; PATTERN addr @ x1,y1 TO x2,y2
 
@@ -217,9 +216,9 @@ exec_plot
 
     jsr lookahead
 
-    cmp #$A8 ; NOT
+    cmp #$A8 ; NOT token
     beq +
-    cmp #$9C ; CLR
+    cmp #$9C ; CLR token
     bne ++
 +   jsr $0073
     dec plot_not
@@ -474,8 +473,58 @@ hires_draw_line
     jmp call_plot_point_indirect ; one last time
 
 exec_rect
-    jsr exec_four_or_five_rect_params_bytes
-    jsr +
+    lda #128
+    sta param5 ; assume monochrome set
+    ; optional NOT/CLR for erasing monochrome rect
+    jsr lookahead
+    cmp #$A8 ; NOT token
+    beq +
+    cmp #$9C ; CLR token
+    bne ++
++   lda #255
+    sta param5
+    jsr $0073 ; gobble up
+    jsr lookahead
+
+++  cmp #$40 ; skip over optional @
+    bne +
+    jsr $0073
++   
+--  jsr getbytc ; not sure yet, so parse one byte
+    cmp #$2c ; is next token is comma?
+    bne + 
+    ; yes, these are coordinates
+    stx param1
+    jsr getbytc
+    stx param2
+    jmp ++
+    
++   ldy param5
+    cpy #$ff
+    bne + ; branch if didn't see NOT/CLR  
+-   jmp syntax_error
++   stx param5 ; this is multicolor choice (must be 0-3)
+    cmp #$40 ; expect @
+    bne -  ; @ was expected
+    beq --
+
+++  cmp #$A4 ; TO token
+    bne - ; TO was expected
+
+    ; expect two more bytes for ending coordinates
+    jsr getbytc
+    cmp #$2c
+    stx param3
+    bne -
+    jsr getbytc
+    stx param4
+
+    lda #5 ; assume 5 parameters, multicolor or erase
+    ldy param5
+    cpy #$80
+    bne +
+    lda #4 ; just monochrome normal, so no extra param
++   jsr + ; draw rectangle
     jmp reloop
 
 hires_rect
@@ -1792,16 +1841,12 @@ five_params_bytes
     rts
 ++  jmp syntax_error
 
-exec_four_or_five_rect_params_bytes
-    ldy #0
-    beq +
-
 four_or_five_rect_params_bytes
     ldy #0
     lda ($7a),y
     cmp #$2C
     bne ++
-+   jsr getbytc
+    jsr getbytc
     cmp #$2C
     bne ++
     stx param1
