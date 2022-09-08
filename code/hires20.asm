@@ -25,7 +25,7 @@
 ; COLOR [fg[+8][,[bg][,[bd][,aux[,inverse]]]]]
 ; COLOR [fg[+8]] @ x1,y1 [TO x2,y2]
 ; TEXT
-; HIRES xr, yr
+; HIRES xr, yr [,fillbyte]
 ; DELAY jiffies
 ; PLOT [0|1|2|3|NOT|CLR] (@ x1,y1)|(TO x2,y2)...     (** first @ optional if not multicolor) 
 ; PLOT COLOR ON|OFF
@@ -126,13 +126,20 @@ exec_text
     jmp reloop
 
 exec_hires
-    jsr exec_two_params_bytes
-    jsr +
-    jmp reloop
+    jsr next_two_bytes
+    jsr ++
+    ldy #0
+    lda ($7a),y
+    cmp #$2C ; comma
+    bne +
+    jsr getbytc
+    txa
+    jsr fill_graphics
++   jmp reloop
 
 hires_init
     jsr two_params_bytes
-+   jsr verifyres
+++  jsr verifyres
     jsr switch_graphics
     jsr clear_graphics
     jsr fill_video_chars

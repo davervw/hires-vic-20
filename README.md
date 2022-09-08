@@ -9,7 +9,7 @@ _(work in progress, subject to change)_
     COLOR [foreground[+8][,[background][,[border][,auxillary[,inverse]]]]]
     COLOR [foreground[+8]] @ x1,y1 [TO x2,y2]
     TEXT
-    HIRES xr, yr
+    HIRES xresolution, yresolution [,fillbyte]
     DELAY jiffies
     PLOT [NOT|CLR] (@ x1,y1)|(TO x2,y2)...    **
     PLOT 0|1|2|3 (@ x1,y1)|(TO x2,y2)...
