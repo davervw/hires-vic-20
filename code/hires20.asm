@@ -94,23 +94,8 @@ start
     jmp sys_shape ; get/put shape
     jmp init_basic ; setup vectors for adding HIRES commands, etc.
 
-    ; BRK statements filler for yet to be implemented entry points (256 bytes)
-    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    ; BRK statements filler for yet to be implemented entry points (18 bytes)
+    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
 init_basic
     lda #<basic_error
@@ -1195,50 +1180,6 @@ plot_addr
     ldy param2
     sty oldy
     rts
-    
-; addr = $1100 + 16*int(x/8)+16*hr/8*int(y/16)+(y and 15)
-; addr = $1100 + 2*(x and 248) + hr*((y >> 3) and 254)+(y and 15)
-; bit = 2^(7-(x and 7))
-
-; plot_prep
-;     lda param1
-;     cmp resx
-;     beq +
-;     bcs ++
-; +   lda param2
-;     cmp resy
-;     beq +
-;     bcc +
-; ++  jmp syntax_error
-; +   lda #$11
-;     sta $fc
-;     lda param1
-;     and #$f8
-;     asl
-;     sta $fb
-;     bcc +
-;     inc $fc
-; +   lda param2
-;     lsr
-;     lsr
-;     lsr
-;     and #$fe
-;     ldx resx
-;     jsr multax
-;     clc
-;     adc $fb
-;     sta $fb
-;     txa
-;     adc $fc
-;     sta $fc
-;     lda param2
-;     and #$0F
-;     tay
-;     lda param1
-;     and #$07
-;     tax
-;     lda pow7_x,x
-;     rts
 
 switch_text
     lda #22
