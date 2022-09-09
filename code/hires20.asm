@@ -27,8 +27,9 @@
 ; TEXT
 ; HIRES xr, yr [,fillbyte]
 ; DELAY jiffies
-; PLOT [0|1|2|3|NOT|CLR] (@ x1,y1)|(TO x2,y2)...     (** first @ optional if not multicolor) 
 ; PLOT COLOR ON|OFF
+; PLOT [0|1|2|3|NOT|CLR] (@ x1,y1)|(TO x2,y2)...     (** first @ optional if not multicolor) 
+; PLOT "ABC" @ x,y
 ; RECT [NOT|CLR] [@] x1,y1 TO x2,y2
 ; RECT 0|1|2|3 @ x1,y1 TO x2,y2
 ; SHAPE GET|PUT|OR|XOR|AND|NOT|CLR addr, x1, y1, x2, y2
@@ -149,7 +150,7 @@ hires_init
 
 draw_text
     jsr two_params_bytes_string
-
+plot_string
     ldx strlen
     beq ++ ; check if nothing to do
 
@@ -248,7 +249,21 @@ exec_plot
     cmp #$FF
     beq +++ ; NOT/CLR seen, but not TO, so must be coordinate
     ; so look for coordinate or multicolor choice
-    jsr getbytc
+    jsr $0073 ; get next token
+    jsr string_or_byte
+    bcc +
+    sta strlen
+    stx $5a
+    sty $5b
+    ldy #0
+    lda ($7a),y
+    cmp #$40 ; require @
+    bne ---
+    jsr next_two_bytes
+    jsr plot_string
+    jmp reloop
++   ldy #0
+    lda ($7a),y
     cmp #$A4 ; TO token?
     bne +
     stx plot_mode
@@ -260,8 +275,9 @@ exec_plot
 
     ; we got first coordinate, now go for second
 +   cmp #$2c
-    bne --- ; syntax error if no comma
-    stx param1
+    beq +
+    jmp syntax_error
++   stx param1
     jsr getbytc
     stx param2
     jmp ++++
@@ -1901,6 +1917,24 @@ commaorbyte
         bne -
 +       sec
         rts
+
+string_or_byte
+; returns C set: A=len, X/Y=addr of string
+; returns C clear: X=value
+    jsr frmevl	; evaluate expression
+	bit $d		; string or numeric?
+	bpl +
+    jsr pulstr	; pull string from descriptor stack (a=len, x=lo, y=hi addr of string)
+    sec ; string value signal
+    bcs ++
++   jsr makadr
+    ldx $14
+    ldy $15
+    beq +
+    jmp illegal_quantity
++   clc ; byte value signal
+++
+    rts
 
 lookahead
         ldy #0

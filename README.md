@@ -11,9 +11,10 @@ _(work in progress, subject to change)_
     TEXT
     HIRES xresolution, yresolution [,fillbyte]
     DELAY jiffies
+    PLOT COLOR ON|OFF
     PLOT [NOT|CLR] (@ x1,y1)|(TO x2,y2)...    **
     PLOT 0|1|2|3 (@ x1,y1)|(TO x2,y2)...
-    PLOT COLOR ON|OFF
+    PLOT "ABC" @ x,y
     RECT [NOT|CLR] [@] x1,y1 TO x2,y2
     RECT 0|1|2|3 @ x1,y1 TO x2,y2
     SHAPE GET|PUT|OR|XOR|AND|NOT|CLR addr, x1, y1, x2, y2
