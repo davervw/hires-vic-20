@@ -127,6 +127,7 @@ exec_text
     jmp reloop
 
 exec_hires
+    jsr reset_font_params
     jsr next_two_bytes
     jsr ++
     ldy #0
@@ -370,6 +371,17 @@ more_plot_text_params
 ++  rts
 +++ jmp illegal_quantity
 ++++ jmp syntax_error
+
+reset_font_params
+    lda #$00
+    sta font_address
+    lda #$80
+    sta font_address+1
+    lda #8
+    sta font_width
+    sta font_height
+    sta font_bytes
+    rts
 
 hires_plot
     jsr two_params_bytes
