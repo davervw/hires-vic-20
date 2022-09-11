@@ -29,13 +29,13 @@
 ; DELAY jiffies
 ; PLOT COLOR ON|OFF
 ; PLOT [0|1|2|3|NOT|CLR] (@ x1,y1)|(TO x2,y2)...     (** first @ optional if not multicolor) 
-; PLOT "ABC" @ x,y
+; PLOT "ABC" @ x,y [,addr [,width,height [,bytes]]]
 ; RECT [NOT|CLR] [@] x1,y1 TO x2,y2
 ; RECT 0|1|2|3 @ x1,y1 TO x2,y2
 ; SHAPE GET|PUT|OR|XOR|AND|NOT|CLR addr, x1, y1, x2, y2
 
 ; PROPOSED SYNTAX REMAINING
-; PLOT [0|1|2|3 ,] "ABC" @ x,y [,[addr [,width,height]]]
+; PLOT [0|1|2|3 ,] "ABC" @ x,y [,addr [,width,height [,bytes]]]
 ; SHAPE [0|1|2|3] GET|PUT|OR|XOR|AND|NOT|CLR addr @ x1,y1 TO x2,y2
 ; PATTERN addr @ x1,y1 TO x2,y2
 
@@ -158,10 +158,11 @@ plot_string
     lda #1
     sta param5
 
-    ; y2=y1+7
+    ; y2=y1+height-1
     clc
     lda param2
-    adc #7
+    adc font_height
+    sbc #0 ; subtract one with carry clear
     sta param4
     cmp resy
     bcs ++
@@ -170,9 +171,10 @@ plot_string
     sty $60
 
 -   
-    ; x2=x1+7
+    ; x2=x1+width-1
     lda param1
-    adc #7
+    adc font_width
+    sbc #0 ; subtract one with carry clear
     sta param3
     cmp resx
     bcs ++
@@ -183,10 +185,10 @@ plot_string
     jsr get_char_addr
     jsr get_put_shape
 
-    ; x1+=8
+    ; x1+=width
     clc
     lda param1
-    adc #8
+    adc font_width
     sta param1
     bcs ++
     cmp resx
@@ -251,7 +253,8 @@ exec_plot
     ; so look for coordinate or multicolor choice
     jsr $0073 ; get next token
     jsr string_or_byte
-    bcc +
+    bcc + ; branch if byte
+    ; string!
     sta strlen
     stx $5a
     sty $5b
@@ -260,6 +263,7 @@ exec_plot
     cmp #$40 ; require @
     bne ---
     jsr next_two_bytes
+    jsr more_plot_text_params
     jsr plot_string
     jmp reloop
 +   ldy #0
@@ -320,6 +324,52 @@ exec_plot
 +   sta param3
     jsr hires_mplot_point
     jmp -
+
+more_plot_text_params
+    beq ++
+    jsr chkcom
+    jsr frmevl
+    jsr makadr
+    sty font_address
+    sta font_address+1
+    ldy #0
+    lda ($7a),y
+    beq ++
+    cmp #$3a
+    beq ++
+    cmp #$2c
+    bne ++++
+    jsr getbytc
+    stx font_width
+    cmp #$2C
+    bne ++++
+    jsr getbytc
+    stx font_height
++   clc
+    lda font_width
+    adc #7
+    lsr
+    lsr
+    lsr
+    beq +++
+    ldx font_height
+    beq +++
+    jsr multax
+    cpx #0
+    bne +++
+    sta font_bytes
+    ldy #0
+    lda ($7a),y
+    beq ++
+    cmp #$3a
+    beq ++
+    jsr getbytc
+    cpx #0
+    beq +++
+    stx font_bytes
+++  rts
++++ jmp illegal_quantity
+++++ jmp syntax_error
 
 hires_plot
     jsr two_params_bytes
@@ -2000,12 +2050,13 @@ get_char_addr
     tya
     pha
     lda $fd
-    ldx #8
+    ldx font_bytes
     jsr multax
-    sta $fd
     clc
+    adc font_address
+    sta $fd
     txa
-    adc #$80
+    adc font_address+1
     sta $fe
     pla
     tay
@@ -2308,5 +2359,10 @@ mbit_x
 
 plot_point_vector
 !byte 0, 0
+
+font_address !byte $00, $80
+font_bytes !byte 8
+font_width !byte 8
+font_height !byte 8
 
 finis
