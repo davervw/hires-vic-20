@@ -17,7 +17,7 @@ _(work in progress, subject to change)_
     PLOT "ABC" @ x,y [,addr [,width,height [,bytes]]]
     RECT [NOT|CLR] [@] x1,y1 TO x2,y2
     RECT 0|1|2|3 @ x1,y1 TO x2,y2
-    SHAPE GET|PUT|OR|XOR|AND|NOT|CLR addr, x1, y1, x2, y2
+    SHAPE GET|PUT|OR|XOR|AND|NOT|CLR addr @ x1, y1 TO x2, y2
 
     ** only first @ optional, when not multi-color
 

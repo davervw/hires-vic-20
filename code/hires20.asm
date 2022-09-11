@@ -32,7 +32,7 @@
 ; PLOT "ABC" @ x,y [,addr [,width,height [,bytes]]]
 ; RECT [NOT|CLR] [@] x1,y1 TO x2,y2
 ; RECT 0|1|2|3 @ x1,y1 TO x2,y2
-; SHAPE GET|PUT|OR|XOR|AND|NOT|CLR addr, x1, y1, x2, y2
+; SHAPE GET|PUT|OR|XOR|AND|NOT|CLR addr @ x1, y1 TO x2, y2
 
 ; PROPOSED SYNTAX REMAINING
 ; PLOT [0|1|2|3 ,] "ABC" @ x,y [,addr [,width,height [,bytes]]]
@@ -792,9 +792,27 @@ sys_shape
     sty $fd
     sta $fe
     
-    jsr four_params_bytes
-    ; param1,param2 = x1/y1 position on screen (left/top of shape)
-    ; param3,param4 = x2/y2 position on screen (right/bottom of shape)
+    ; @ param1,param2 = x1/y1 position on screen (left/top of shape)
+    ldy #0
+    lda ($7a),y
+    cmp #$40 ; @
+    bne ++
+    jsr getbytc
+    stx param1
+    cmp #$2c ; comma
+    bne ++
+    jsr getbytc
+    stx param2
+
+    ; TO param3,param4 = x2/y2 position on screen (right/bottom of shape)
+    cmp #$a4 ; TO token
+    bne ++
+    jsr getbytc
+    stx param3
+    cmp #$2c ; comma
+    bne ++
+    jsr getbytc
+    stx param4
 
     ; validate coordinate parameters
     ; x1 <= x2 < resx
@@ -1703,52 +1721,6 @@ next_two_bytes
     stx param1
     jsr getbytc
     stx param2
-    rts
-++  jmp syntax_error
-
-four_params_bytes
-    ldy #0
-    lda ($7a),y
-    cmp #$2C
-    bne ++
-    jsr getbytc
-    cmp #$2C
-    bne ++
-    stx param1
-    jsr getbytc
-    cmp #$2C
-    bne ++
-    stx param2
-    jsr getbytc
-    cmp #$2C
-    bne ++
-    stx param3
-    jsr getbytc
-    bne ++ ; not end of statement
-    stx param4
-    rts
-++  jmp syntax_error
-
-exec_five_params_bytes
-    jsr getbytc
-    cmp #$2C
-    bne ++
-    stx param1
-    jsr getbytc
-    cmp #$2C
-    bne ++
-    stx param2
-    jsr getbytc
-    cmp #$2C
-    bne ++
-    stx param3
-    jsr getbytc
-    cmp #$2C
-    bne ++
-    stx param4
-    jsr getbytc
-    bne ++ ; not end of statement
-    stx param5
     rts
 ++  jmp syntax_error
 
