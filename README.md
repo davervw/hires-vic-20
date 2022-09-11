@@ -1,10 +1,10 @@
 # Hi-Res BASIC Extensions for Commodore Vic-20 #
 
 I added commands to Commodore Vic-20 BASIC via software extensions
-written in 6502 Assembly.  This is an original work leveraging my [HIRES for C64](https://github.com/davervw/hires-c64). (_Work in progress, nearing Alpha functionality_)
+written in 6502 Assembly.  This is an original work leveraging my [HIRES for C64](https://github.com/davervw/hires-c64). 
 
-### Command syntax ###
-_(work in progress, subject to change)_
+<details>
+<summary>Command syntax</summary>
 
     COLOR [foreground[+8][,[background][,[border][,auxillary[,inverse]]]]]
     COLOR [foreground[+8]] @ x1,y1 [TO x2,y2]
@@ -20,6 +20,10 @@ _(work in progress, subject to change)_
     SHAPE GET|PUT|OR|XOR|AND|NOT|CLR addr @ x1, y1 TO x2, y2
 
     ** only first @ optional, when not multi-color
+
+</details>
+
+<br>
 
 ![Demo1 resizing](https://github.com/davervw/hires-vic-20/raw/master/doc/media/demo1/video.gif)
 <details>
