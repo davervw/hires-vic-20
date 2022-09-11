@@ -75,30 +75,7 @@ chrout=$ffd2
 *=$A000
 
 start
-    jmp hires_init ; switch to HIRES
-    jmp multax ; multiply 8-bit by 8-bit
-    jmp divaxwithy ; divide 16-bit by 8-bit
-    jmp divremainder ; get remainder of last division of 16-bit by 8-bit
-    jmp hires_plot ; plot point on screen
-    jmp hires_unplot ; remove point from screen
-    jmp get_resolution ; retrieve resolution
-    jmp draw_text ; text at location
-    jmp color ; set foreground, background, border, auxilary, inverse
-    jmp hires_mplot ; plot multi-color point on screen
-    jmp hires_fill ; fill graphics with a bit pattern
-    jmp set_plot_color ; set color selectively applied to color cells for graphics, or 255 to use existing color cells
-    jmp hires_draw ; draw line on screen (also undraw, multicolor)
-    jmp hires_rect ; draw/undraw rectangle on screen
-    jmp hires_color ; set color of 8x16 tiles on screen relating to rectangle of pixels
-    jmp text_color ; set color of characters on screen relating to col/row to col/row rectangle of characters
-    jmp sys_delay ; busy wait for number of jiffies to elapse
-    jmp sys_shape ; get/put shape
-    jmp init_basic ; setup vectors for adding HIRES commands, etc.
-
-    ; BRK statements filler for yet to be implemented entry points (18 bytes)
-    !byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-
-init_basic
+; init_basic - setup vectors for adding HIRES commands, etc.
     lda #<basic_error
     sta $300
     lda #>basic_error
@@ -129,7 +106,11 @@ exec_text
 exec_hires
     jsr reset_font_params
     jsr next_two_bytes
-    jsr ++
+    jsr hires_init
+    ldx resx
+    ldy resy
+    stx 781
+    sty 782
     ldy #0
     lda ($7a),y
     cmp #$2C ; comma
@@ -140,17 +121,13 @@ exec_hires
 +   jmp reloop
 
 hires_init
-    jsr two_params_bytes
-++  jsr verifyres
+    jsr verifyres
     jsr switch_graphics
     jsr clear_graphics
     jsr fill_video_chars
     jsr fill_video_color
-    jsr get_resolution
     rts
 
-draw_text
-    jsr two_params_bytes_string
 plot_string
     ldx strlen
     beq ++ ; check if nothing to do
@@ -383,8 +360,6 @@ reset_font_params
     sta font_bytes
     rts
 
-hires_plot
-    jsr two_params_bytes
 hires_plot_point
     jsr plot_prep
     ora ($fb),y
@@ -396,8 +371,6 @@ hires_plot_point
     sta $9400,x
 +   rts
 
-hires_unplot
-    jsr two_params_bytes
 hires_unplot_point
     jsr plot_prep
     eor #$ff
@@ -410,8 +383,6 @@ hires_unplot_point
     sta $9400,x
 +   rts
 
-hires_mplot
-    jsr three_params_bytes
 hires_mplot_point
     jsr mplot_prep
     and ($fb),y
@@ -426,24 +397,6 @@ hires_mplot_point
     sta $9400,x
 +   rts
 
-hires_fill
-    jsr one_param_byte
-    lda param1
-    jmp fill_graphics
-
-set_plot_color
-    jsr one_param_byte
-    lda param1
-    cmp #$10
-    bcc +
-    cmp #$FF
-    beq +
-    jmp illegal_quantity
-+   sta plot_color
-    rts
-
-hires_draw
-    jsr two_or_three_params_bytes
     ; param1 = x coordinate
     ; param2 = y coordinate
     ; param3 (optional) = multicolor 0,1,2,3 choice, or 255 (unplot hires)
@@ -626,18 +579,16 @@ exec_rect
     cpy #$80
     bne +
     lda #4 ; just monochrome normal, so no extra param
-+   jsr + ; draw rectangle
++   jsr hires_rect ; draw rectangle
     jmp reloop
 
-hires_rect
-    jsr four_or_five_rect_params_bytes
     ; param1/param2 = first x/y coordinate
     ; param3/param4 = second x/y coordinate
     ; param5 = multicolor 0,1,2,3 choice, or 255 (unplot hires), or undefined if 4 parameters
     ; .A = number of parameters
-
     ; validate and store parameters
-+   cmp #6
+hires_rect
+    cmp #6
     bcc +
 -   jmp illegal_quantity
 +   cmp #4
@@ -697,8 +648,6 @@ hires_rect
     sta param4
     jmp hires_draw_line
 
-hires_color
-    jsr five_params_bytes
 hires_color_at
     lda param1
     cmp resx
@@ -737,8 +686,6 @@ hires_color_at
     ldy cols
     jmp rect_color
 
-text_color
-    jsr five_params_bytes
 text_color_at
     lda param1
     cmp #22
@@ -1550,12 +1497,11 @@ exec_color
     lda param1
     sta plot_color
 
-+   jsr +
++   jsr color
     jmp reloop
 
 color
-    jsr five_params_bytes
-+   lda param1
+    lda param1
     and #$F0
     bne ++
     lda param2
@@ -1728,16 +1674,6 @@ divaxwithy
     ldx sumh
     rts
 
-divremainder ; get remainder
-    lda remainl
-    ldx remainh
-    rts
-
-get_resolution
-    ldx resx
-    ldy resy
-    rts
-
 one_param_byte
     ldy #0
     lda ($7a),y
@@ -1750,15 +1686,7 @@ one_param_byte
 ++  jmp syntax_error
 
 exec_two_params_bytes
-    ldy #0
-    beq +
-
-two_params_bytes
-    ldy #0
-    lda ($7a),y
-    cmp #$2C
-    bne ++
-+   jsr getbytc
+    jsr getbytc
     cmp #$2C
     bne ++
     stx param1
@@ -1775,70 +1703,6 @@ next_two_bytes
     stx param1
     jsr getbytc
     stx param2
-    rts
-++  jmp syntax_error
-
-two_or_three_params_bytes
-    ldx #2
-    stx param4
-    ldy #0
-    lda ($7a),y
-    cmp #$2C
-    bne ++
-    jsr getbytc
-    cmp #$2C
-    bne ++
-    stx param1
-    jsr getbytc
-    stx param2
-    beq +
-    cmp #$2C
-    bne ++
-    jsr getbytc
-    bne ++
-    stx param3
-    inc param4
-+   rts
-++  jmp syntax_error
-
-two_params_bytes_string
-    ldy #0
-    lda ($7a),y
-    cmp #$2C
-    bne ++
-    jsr getbytc
-    cmp #$2C
-    bne ++
-    stx param1
-    jsr getbytc
-    stx param2
-    jsr chkcom
-	jsr frmevl	; evaluate expression
-	bit $d		; string or numeric?
-	bpl ++
-    jsr pulstr	; pull string from descriptor stack (a=len, x=lo, y=hi addr of string)
-    sta strlen
-    stx $5a
-    sty $5b
-    rts
-++  jmp syntax_error
-
-three_params_bytes
-    ldy #0
-    lda ($7a),y
-    cmp #$2C
-    bne ++
-    jsr getbytc
-    cmp #$2C
-    bne ++
-    stx param1
-    jsr getbytc
-    cmp #$2C
-    bne ++
-    stx param2
-    jsr getbytc
-    bne ++ ; not end of statement
-    stx param3
     rts
 ++  jmp syntax_error
 
@@ -1866,15 +1730,7 @@ four_params_bytes
 ++  jmp syntax_error
 
 exec_five_params_bytes
-    ldy #0
-    beq +
-
-five_params_bytes
-    ldy #0
-    lda ($7a),y
-    cmp #$2C
-    bne ++
-+   jsr getbytc
+    jsr getbytc
     cmp #$2C
     bne ++
     stx param1
@@ -1893,37 +1749,6 @@ five_params_bytes
     jsr getbytc
     bne ++ ; not end of statement
     stx param5
-    rts
-++  jmp syntax_error
-
-four_or_five_rect_params_bytes
-    ldy #0
-    lda ($7a),y
-    cmp #$2C
-    bne ++
-    jsr getbytc
-    cmp #$2C
-    bne ++
-    stx param1
-    jsr getbytc
-    cmp #$2C
-    bne ++
-    stx param2
-    jsr getbytc
-    cmp #$2C
-    bne ++
-    stx param3
-    jsr getbytc
-    stx param4
-    bne +
-    lda #4 ; number of parameters seen
-    rts
-+   cmp #$2C
-    bne ++
-    jsr getbytc
-    bne ++ ; not end of statement
-    stx param5
-    lda #5 ; number of parameters seen
     rts
 ++  jmp syntax_error
 

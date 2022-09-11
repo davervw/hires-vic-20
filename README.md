@@ -21,35 +21,6 @@ _(work in progress, subject to change)_
 
     ** only first @ optional, when not multi-color
 
-<details>
-<summary>SYS syntax</summary>
-
-This syntax provides more complete access to low level features (especially until BASIC syntax implemented)
-
-    SYS 40960, xres, yres : REM switch to graphics at resolution, may zero one axis, result in .X, .Y
-        REM specify both zeros to switch back to text
-    POKE 780, n1:POKE 781, n2:SYS 40963 : REM multiply .A and .X (shift/add method), result in .A(low),.X(high)
-    POKE 780,781,782...:SYS 40966 : REM divide 16-bit(.A,.X) by .Y, result in .A(low), .X(high)
-    SYS 40969 : REM get division remainder, result in .A(low), .X(high)
-    SYS 40972, x, y : REM plot point on screen
-    SYS 40975, x, y : REM erase point from screen
-    SYS 40978 : REM get resolution in .X, .Y (781, 782)
-    SYS 40981, x, y, "string" : REM draw text on graphics screen
-    SYS 40984, fg[+8], bg, bd, alt, inverse : REM set VIC color registers and inverse flag, supports multicolor
-    SYS 40987, x, y, color : REM multicolor plot/unplot
-    SYS 40990, byte : REM fill hires graphics screen memory with byte value
-    SYS 40993, color : REM set color used plotting points/lines (or 255 to reset)
-    SYS 40996, x1, y1, x2, y2 [,color] : REM draw(/erase color 255) hires line, or multicolor line (color 0-3)
-    SYS 40999, x1, y1, x2, y2 [,color] : REM draw/erase rectangle (multicolor 0-3, erase hires 255)
-    SYS 41002, x1, y1, x2, y2, fg : REM set foreground color of hires 8x16 tiles
-    SYS 41005, x1, y1, x2, y2, fg : REM set foreground color of text screen characters
-    SYS 41008, jiffies : REM delay for a multiple of 1/60 of a second
-    SYS 41011, x1, y1, x2, y2, op : REM shape operation GET(0), PUT(1), OR(2), XOR(3), AND(4), NOT(5)
-    SYS 41014 : REM initialize package including BASIC vectors for list, crunch, execute, error
-</details>
-
-</br>
-
 ![Demo1 resizing](https://github.com/davervw/hires-vic-20/raw/master/doc/media/demo1/video.gif)
 <details>
 <summary>Demo1 resizing Notes</summary>
