@@ -75,8 +75,31 @@ chrout=$ffd2
 *=$A000
 
 start
-; init_basic - setup vectors for adding HIRES commands, etc.
-    lda #<basic_error
+    jmp init_basic
+
+copyright
+    !byte 18
+    !text "VIC-20 HIRES"
+    !byte 13
+    !text "COPYRIGHT (C) 2022"
+    !byte 13
+    !text "BY DAVID VAN WAGNER"
+    !byte 13
+    !text "DAVEVW.COM"
+    !byte 13
+    !text "MIT LICENSE"
+    !byte 13
+    !byte 0
+
+init_basic ; setup vectors for adding HIRES commands, etc.
+    ldx #0
+-   lda copyright,x
+    beq +
+    jsr chrout
+    inx
+    bne -
+
++   lda #<basic_error
     sta $300
     lda #>basic_error
     sta $301
@@ -1251,7 +1274,7 @@ switch_text
     and #7  ; mask out multicolor
     sta 646 ; foreground color
     lda #147 ; clear screen
-    jsr $FFD2
+    jsr chrout
     lda #0
     sta resx
     sta resy
