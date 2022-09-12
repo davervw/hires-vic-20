@@ -46,12 +46,16 @@ written in 6502 Assembly.  This is an original work leveraging my [HIRES for C64
 <summary>Usage</summary>
 
     REM REQUIRES 8K expansion at $2000, and 8K expansion at $A000
-    LOAD"LOADER",8 : REM LOAD/INIT HIRES20.ML
+    LOAD"LOADHIRES20",8 : REM LOAD/INIT HIRES EXTENSION
     RUN
     LOAD"HIRES28",8 : REM DEMO1
     RUN
     LOAD"4UPART",8 : REM DEMO2
     RUN
+
+* LOADHIRES20 is only file needed to install the extensions (but do not modify by conventional means)
+* HIRES20.ML is an alternative copy that can be manually loaded and initialized (SYS 40960), 
+but requires additional steps including moving start of BASIC programs (away from 4096-8191) and performing NEW (see LOADHIRES20)
 
 </details>
 
