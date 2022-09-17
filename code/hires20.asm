@@ -130,8 +130,10 @@ exec_hires
     jsr reset_font_params
     jsr next_two_bytes
     jsr hires_init
+    lda is_pal
     ldx resx
     ldy resy
+    sta 780
     stx 781
     sty 782
     ldy #0
@@ -170,9 +172,11 @@ plot_string
 
     ldy #0
     sty $60
+    sty font_inverse
 
 -   
     ; x2=x1+width-1
+    clc
     lda param1
     adc font_width
     sbc #0 ; subtract one with carry clear
@@ -182,7 +186,11 @@ plot_string
 
     ldy $60
     lda ($5a),y
-    jsr petscii_to_screencode
+    cmp #18
+    bne +
+    sta font_inverse
+    beq +++
++   jsr petscii_to_screencode
     jsr get_char_addr
     jsr get_put_shape
 
@@ -195,8 +203,8 @@ plot_string
     cmp resx
     bcs ++
 
-    ; ++y
-    inc $60
+    ; ++y (character index)
++++ inc $60
 
     dec strlen
     bne -
@@ -797,6 +805,7 @@ exec_shape
     
     ; @ param1,param2 = x1/y1 position on screen (left/top of shape)
     ldy #0
+    sty font_inverse
     lda ($7a),y
     cmp #$40 ; @
     bne ++
@@ -853,6 +862,12 @@ get_put_shape ; addr=$fd/$fe (x1,y1)=(param1,param2) (x2,y2)=(param3,param4) mod
 +   dex
     bne + 
     ; mode PUT(1)
+    lda font_inverse
+    beq not_rvs
+    lda #<put_shape_inverse_fn
+    ldy #>put_shape_inverse_fn
+    bne ++
+not_rvs
     lda #<put_shape_fn
     ldy #>put_shape_fn
     bne ++
@@ -1041,6 +1056,13 @@ get_shape_fn
 ++  sta ($fd),y
     ldy shbitmapy
     rts
+
+put_shape_inverse_fn
+    lda $59
+    eor #$ff
+    and shmask
+    sta $59
+    ; fall through to put_shape_fn
 
 put_shape_fn
         ;     dst[i] = (dst[i] & ~mask) | data
@@ -1273,6 +1295,8 @@ switch_graphics
 
     jsr ntsc_or_pal
     bcs +++
+    lda #0
+    sta is_pal
 
 ; adjust ntsc margins of screen based on resolutions
     lda cols
@@ -1292,7 +1316,9 @@ switch_graphics
     rts
 
 ; adjust pal margins of screen based on resolutions
-+++ lda cols
++++ lda #1
+    sta is_pal
+lda cols
     eor #$ff ; invert bits to make negative, off by one
     adc #35 ; add one more to compensate for ones complement
     sta 36864
@@ -2135,6 +2161,7 @@ incx !byte 0
 incy !byte 0
 supress_error !byte 0
 
+is_pal !byte 0
 resx !byte 0
 resy !byte 0
 bitmap_chars !byte 0
@@ -2177,6 +2204,7 @@ font_address !byte $00, $80
 font_bytes !byte 8
 font_width !byte 8
 font_height !byte 8
+font_inverse !byte 0
 
 *=$b000
 !byte %01000000
