@@ -42,6 +42,23 @@ written in 6502 Assembly.  This is an original work leveraging my [HIRES for C64
 
 4UPART (demo2)
 
+<br>
+
+![Demo3 tiny font](https://github.com/davervw/hires-vic-20/raw/master/doc/media/demo3/40x24chars_vs_72x16chars.png)
+
+<details>
+<summary>4x8 font</summary>
+
+The PLOT "TEXT" syntax allows for optionally specifying the font address, height, width, and number of bytes to skip between characters (useful when squeezing the font smaller to eliminate whitespace... example 7 lines instead of 8 sacrificing the last line of the font image but skipping 8 bytes because the font is designed with 8 bytes).
+
+The 4x8 font is currently at $B000 (11*4096 decimal), included in the LOADHIRES20 image.   It may be optional or moved in the future.
+
+Feel free to make fonts of any size.  The font SHAPEs can be any height/width you design.  Then use the PLOT command to draw the text on the screen.
+
+</details>
+
+<br>
+
 <details>
 <summary>Usage</summary>
 
