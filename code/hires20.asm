@@ -731,12 +731,6 @@ text_color_at
 
 exec_delay
     jsr $0073
-    jsr +
-    jmp reloop
-
-sys_delay
-    jsr chkcom
-+
     jsr frmnum
  	jsr makadr	; convert to integer
 
@@ -765,7 +759,7 @@ sys_delay
     lda alarm+2
 -   cmp $A2
     bne -
-    rts
+    jmp reloop
 
 parse_shape_op ; convert token to shape operation mode 0..5
     jsr $0073 ; get next token
@@ -796,21 +790,7 @@ parse_shape_op ; convert token to shape operation mode 0..5
 exec_shape
     jsr parse_shape_op
     jsr $0073 ; get next token
-    jsr +
-    jmp reloop
-
-sys_shape
-    ; get mode
-    jsr getbytc
-    cpx #6
-    bcs +++ ; branch if mode out of range
-    cmp #$2C
-    bne ++
-    stx param5
-    
-    ; get address of shape to get/put
-    jsr chkcom
-+   jsr frmnum
+    jsr frmnum
  	jsr makadr	; convert to integer
     sty $fd
     sta $fe
@@ -854,7 +834,8 @@ sys_shape
     lda param4
     cmp resy
     bcs +++
-    jmp get_put_shape
+    jsr get_put_shape
+    jmp reloop
 ++  jmp syntax_error
 +++ jmp illegal_quantity
 
