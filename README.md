@@ -55,6 +55,8 @@ The 4x8 font is currently at $B000 (11*4096 decimal), included in the LOADHIRES2
 
 Feel free to make fonts of any size.  The font SHAPEs can be any height/width you design.  Then use the PLOT command to draw the text on the screen.
 
+![Type sizer program](https://github.com/davervw/hires-vic-20/raw/master/doc/media/demo3/type_sizer.png)
+
 </details>
 
 <br>
