@@ -25,6 +25,10 @@ written in 6502 Assembly.  This is an original work leveraging my [HIRES for C64
 
 <br>
 
+![Ship demo](https://github.com/davervw/hires-vic-20/raw/master/doc/media/demo4/demo_ship_animation.gif)
+
+<br>
+
 ![Demo1 resizing](https://github.com/davervw/hires-vic-20/raw/master/doc/media/demo1/video.gif)
 <details>
 <summary>Demo1 resizing Notes</summary>
