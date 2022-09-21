@@ -1,7 +1,7 @@
 # Hi-Res BASIC Extensions for Commodore Vic-20 #
 
 I added commands to Commodore Vic-20 BASIC via software extensions
-written in 6502 Assembly.  This is an original work leveraging my [HIRES for C64](https://github.com/davervw/hires-c64). 
+written in 6502 Assembly.  This is an original work leveraging my [HIRES for C64](https://github.com/davervw/hires-c64). REQUIRES 8K expansion at $2000, and 8K expansion at $A000.
 
 <details>
 <summary>Command syntax</summary>
