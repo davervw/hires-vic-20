@@ -22,7 +22,7 @@ write code/hires20.asm hires20.asm,s
 write build/hires20.prg hires20.ml
 EOF
 [ $? -eq 0 ] && ${VICE}/xvic.exe -moncommands build/labels build/hires20.d64
-rm vic20_files\*
+rm vic20_files/*
 cd vic20_files
 [ $? -eq 0 ] && ${VICE}/c1541 << EOF
 attach ../build/hires20.d64
