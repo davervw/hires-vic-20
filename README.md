@@ -65,8 +65,7 @@ Feel free to make fonts of any size.  The font SHAPEs can be any height/width yo
 
 <br>
 
-<details>
-<summary>Usage</summary>
+Usage
 
     REM REQUIRES 8K expansion at $2000, and 8K expansion at $A000
     LOAD"LOADHIRES20",8 : REM LOAD/INIT HIRES EXTENSION
@@ -79,8 +78,6 @@ Feel free to make fonts of any size.  The font SHAPEs can be any height/width yo
 * LOADHIRES20 is only file needed to install the extensions (but do not modify by conventional means)
 * HIRES20.ML is an alternative copy that can be manually loaded and initialized (SYS 40960), 
 but requires additional steps including moving start of BASIC programs (away from 4096-8191) and performing NEW (see LOADHIRES20)
-
-</details>
 
 </br>
 
