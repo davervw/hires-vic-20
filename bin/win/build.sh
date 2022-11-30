@@ -1,4 +1,4 @@
-export ACME=/c/Users/Dave/Downloads/acme0.96.4win/acme 
+export ACME=/c/Users/Dave/Downloads/acme0.97win/acme
 #export VICE=/c/Users/Dave/Downloads/GTK3VICE-3.3-win32/GTK3VICE-3.3-win32-r35872
 #export VICE=/c/Users/Dave/Downloads/GTK3VICE-3.4-win64-r37564
 #export VICE=/c/Users/Dave/Downloads/GTK3VICE-3.4-win64-r37568-nocpuhist/GTK3VICE-3.4-win64-r37568
