@@ -297,7 +297,7 @@ exec_plot
 
 --  ; loop:
     cmp #$A4 ; TO token
-    bne ++
+    bne +++++
 ++  jsr next_two_bytes
     php
     pha
@@ -313,7 +313,8 @@ exec_plot
     plp
     bne --
     jmp reloop  
-++  cmp #$40 ; @ token
++++++
+    cmp #$40 ; @ token
     beq +++
     jmp ---
 +++ 
