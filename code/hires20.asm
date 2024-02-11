@@ -1624,7 +1624,7 @@ multax:
     ldy save_y 
     rts
 
-;multiply by shift/subtract
+;divide by shift/subtract
 ;input: a (low), x (high), y (divisor)
 ;output: a (low), x (high), y (zero page pointer to remainder)
 ;algorithm: 
